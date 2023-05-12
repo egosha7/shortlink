@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"math/rand"
@@ -9,6 +10,11 @@ import (
 
 	"github.com/go-chi/chi"
 )
+
+type Config struct {
+	Address string
+	BaseURL string
+}
 
 const form = `<html>
     <head>
@@ -60,9 +66,17 @@ func mainPage(res http.ResponseWriter, req *http.Request) {
 		linkey[struna] = link
 
 		res.WriteHeader(http.StatusCreated)
-		body := fmt.Sprintf("http://localhost:8080/%s", struna)
+		body := fmt.Sprintf("%s/%s", config.Address, struna)
 		res.Write([]byte(body))
 	}
+}
+
+var config Config
+
+func init() {
+	flag.StringVar(&config.Address, "a", ":8080", "HTTP server address")
+	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Base URL for shortened links")
+	flag.Parse()
 }
 
 func main() {
@@ -70,7 +84,7 @@ func main() {
 	r.HandleFunc(`/`, mainPage)
 	r.NotFound(mainPage)
 
-	err := http.ListenAndServe(`:8080`, r)
+	err := http.ListenAndServe(config.Address, r)
 	if err != nil {
 		panic(err)
 	}
