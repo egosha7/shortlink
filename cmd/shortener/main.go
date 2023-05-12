@@ -6,6 +6,8 @@ import (
 	"math/rand"
 	"net/http"
 	"time"
+
+	"github.com/go-chi/chi"
 )
 
 const form = `<html>
@@ -44,7 +46,6 @@ func mainPage(res http.ResponseWriter, req *http.Request) {
 		} else {
 			fullink := linkey[req.URL.Path[1:]]
 			if fullink == "" {
-				res.WriteHeader(http.StatusBadRequest)
 				res.Write([]byte("404"))
 			} else {
 				http.Redirect(res, req, fullink, http.StatusSeeOther)
@@ -59,16 +60,17 @@ func mainPage(res http.ResponseWriter, req *http.Request) {
 		linkey[struna] = link
 
 		res.WriteHeader(http.StatusCreated)
-		body := fmt.Sprintf(struna)
+		body := fmt.Sprintf("http://localhost:8080/%s", struna)
 		res.Write([]byte(body))
 	}
 }
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc(`/`, mainPage)
+	r := chi.NewRouter()
+	r.HandleFunc(`/`, mainPage)
+	r.NotFound(mainPage)
 
-	err := http.ListenAndServe(`:8080`, mux)
+	err := http.ListenAndServe(`:8080`, r)
 	if err != nil {
 		panic(err)
 	}
