@@ -95,6 +95,7 @@ func main() {
 
 	err := http.ListenAndServe(config.Address, r)
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
+		os.Exit(1)
 	}
 }
