@@ -18,9 +18,13 @@ type Config struct {
 }
 
 const form = `<html>
-    <head>
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title></title>
-    </head>
+    <link href="css/style.css" rel="stylesheet">
+</head>
     <body>
         <form action="/" method="post">
             <label>Link </label><input type="text" name="link">
@@ -96,5 +100,6 @@ func main() {
 	err := http.ListenAndServe(config.Address, r)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
+		os.Exit(1)
 	}
 }
