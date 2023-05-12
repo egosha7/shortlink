@@ -75,7 +75,7 @@ func mainPage(res http.ResponseWriter, req *http.Request) {
 var config Config
 
 func init() {
-	flag.StringVar(&config.Address, "a", ":8080", "HTTP server address")
+	flag.StringVar(&config.Address, "a", ":8081", "HTTP server address")
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Base URL for shortened links")
 	flag.Parse()
 
