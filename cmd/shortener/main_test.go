@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/egosha7/shortlink/internal/const"
+	"github.com/egosha7/shortlink/internal/handlers"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,7 +16,7 @@ func TestMainPageGet(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(mainPage)
+	handler := http.HandlerFunc(handlers.MainPage)
 
 	handler.ServeHTTP(rr, req)
 
@@ -23,7 +25,7 @@ func TestMainPageGet(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	expected := form
+	expected := _const.Form
 	if strings.TrimSpace(rr.Body.String()) != expected {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)
@@ -41,7 +43,7 @@ func TestMainPagePost(t *testing.T) {
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(mainPage)
+	handler := http.HandlerFunc(handlers.MainPage)
 
 	handler.ServeHTTP(rr, req)
 
@@ -55,6 +57,7 @@ func TestMainPagePost(t *testing.T) {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			len(rr.Body.String()), expected)
 	}
+
 }
 
 func TestMainPageRedirect(t *testing.T) {
@@ -68,7 +71,7 @@ func TestMainPageRedirect(t *testing.T) {
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(mainPage)
+	handler := http.HandlerFunc(handlers.MainPage)
 
 	handler.ServeHTTP(rr, req)
 
@@ -104,7 +107,7 @@ func TestMainPageBadRequest(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(mainPage)
+	handler := http.HandlerFunc(handlers.MainPage)
 
 	handler.ServeHTTP(rr, req)
 
