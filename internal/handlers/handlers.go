@@ -26,29 +26,57 @@ func RandStringRunes(n int) string {
 var linkey = make(map[string]string)
 
 func MainPage(res http.ResponseWriter, req *http.Request) {
-
-	if req.Method != http.MethodPost {
-		if req.URL.Path == "/" {
-			io.WriteString(res, _const.Form)
-		} else {
-			fullink := linkey[req.URL.Path[1:]]
-			if fullink == "" {
-				res.WriteHeader(http.StatusBadRequest)
-				res.Write([]byte("404"))
-			} else {
-				http.Redirect(res, req, fullink, http.StatusSeeOther)
-			}
-			return
-		}
-
+	if req.URL.Path == "/" {
+		io.WriteString(res, _const.Form)
 	} else {
-		link := req.FormValue("link")
-		struna := string(RandStringRunes(6))
-
-		linkey[struna] = link
-
-		res.WriteHeader(http.StatusCreated)
-		body := fmt.Sprintf("%s", struna)
-		res.Write([]byte(body))
+		fullink := linkey[req.URL.Path[1:]]
+		if fullink == "" {
+			res.WriteHeader(http.StatusBadRequest)
+			res.Write([]byte("404"))
+		} else {
+			http.Redirect(res, req, fullink, http.StatusSeeOther)
+		}
+		return
 	}
+
+	link := req.FormValue("link")
+	struna := string(RandStringRunes(6))
+
+	if contains(struna) {
+		struna = string(RandStringRunes(6))
+		contains(struna)
+	} else {
+		fullink := linkey[struna]
+		if fullink == "" {
+			linkey[struna] = link
+			res.WriteHeader(http.StatusCreated)
+			body := fmt.Sprintf("Ваша ссылка готова - localhost:8080/%s", struna)
+			res.Write([]byte(body))
+		}
+	}
+
+}
+
+func GetPage(res http.ResponseWriter, req *http.Request) {
+	if req.URL.Path == "/" {
+		io.WriteString(res, _const.Form)
+	} else {
+		fullink := linkey[req.URL.Path[1:]]
+		if fullink == "" {
+			res.WriteHeader(http.StatusBadRequest)
+			res.Write([]byte("404"))
+		} else {
+			http.Redirect(res, req, fullink, http.StatusSeeOther)
+		}
+		return
+	}
+}
+
+func contains(struna string) bool {
+	for _, element := range linkey {
+		if element == struna {
+			return true
+		}
+	}
+	return false
 }

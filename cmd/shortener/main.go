@@ -32,7 +32,8 @@ var config Config
 */
 func main() {
 	r := chi.NewRouter()
-	r.HandleFunc(`/`, handlers.MainPage)
+	r.Get(`/`, handlers.GetPage)
+	r.Post(`/`, handlers.MainPage)
 	r.NotFound(handlers.MainPage)
 
 	err := http.ListenAndServe(":8080", r)

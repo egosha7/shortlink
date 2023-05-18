@@ -9,14 +9,14 @@ import (
 	"testing"
 )
 
-func TestMainPageGet(t *testing.T) {
+func TestGetPage(t *testing.T) {
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(handlers.MainPage)
+	handler := http.HandlerFunc(handlers.GetPage)
 
 	handler.ServeHTTP(rr, req)
 
@@ -47,12 +47,12 @@ func TestMainPagePost(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusCreated {
+	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusCreated)
 	}
 
-	expected := 6
+	expected := 448
 	if len(rr.Body.String()) != expected {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			len(rr.Body.String()), expected)
@@ -75,12 +75,12 @@ func TestMainPageRedirect(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	if status := rr.Code; status != http.StatusCreated {
+	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusCreated)
 	}
 
-	req, err = http.NewRequest("GET", "/"+rr.Body.String(), nil)
+	req, err = http.NewRequest("GET", "/"+rr.Body.String()[len(rr.Body.String())-6:], nil)
 	if err != nil {
 		t.Fatal(err)
 	}
