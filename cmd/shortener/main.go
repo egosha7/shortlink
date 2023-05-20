@@ -20,6 +20,13 @@ func init() {
 	flag.StringVar(&config.Address, "a", ":8080", "HTTP server address")
 	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Base URL for shortened links")
 	flag.Parse()
+	// инициализация полей из переменных окружения
+	if addr := os.Getenv("SERVER_ADDRESS"); addr != "" {
+		config.Address = addr
+	}
+	if url := os.Getenv("BASE_URL"); url != "" {
+		config.BaseURL = url
+	}
 }
 
 func main() {
