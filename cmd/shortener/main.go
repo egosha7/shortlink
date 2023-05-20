@@ -7,6 +7,6 @@ import (
 
 func main() {
 	http.HandleFunc("/", handlers.ShortenURL)
-	http.HandleFunc("/{id}", handlers.RedirectURL)
+	http.HandleFunc("/", handlers.RedirectURL)
 	http.ListenAndServe(":8080", nil)
 }
