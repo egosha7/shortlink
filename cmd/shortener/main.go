@@ -1,12 +1,26 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/egosha7/shortlink/internal/handlers"
 	"github.com/go-chi/chi"
 	"net/http"
 	"os"
 )
+
+type Config struct {
+	Address string
+	BaseURL string
+}
+
+var config Config
+
+func init() {
+	flag.StringVar(&config.Address, "a", ":8081", "HTTP server address")
+	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Base URL for shortened links")
+	flag.Parse()
+}
 
 func main() {
 	r := chi.NewRouter()
