@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"egosha7/shortlink/internal/OtherFunc"
 	"fmt"
+	"github.com/egosha7/shortlink/internal/OtherFunc"
 	"io/ioutil"
 	"net/http"
 )

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"egosha7/shortlink/internal/handlers"
+	"github.com/egosha7/shortlink/internal/handlers"
 )
 
 func TestShortenURL(t *testing.T) {
