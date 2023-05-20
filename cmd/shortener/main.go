@@ -28,7 +28,7 @@ func main() {
 	r.Post(`/`, handlers.ShortenURL)
 	r.NotFound(handlers.RedirectURL)
 
-	err := http.ListenAndServe(":8080", r)
+	err := http.ListenAndServe(config.Address, r)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
 		os.Exit(1)
