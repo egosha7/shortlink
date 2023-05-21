@@ -3,40 +3,34 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/handlers"
 	"github.com/go-chi/chi"
 	"net/http"
 	"os"
 )
 
-type Config struct {
-	Address string
-	BaseURL string
-}
+func main() {
+	// Инициализация конфигурации
+	cfg := config.New()
 
-var config Config
-
-func init() {
-	flag.StringVar(&config.Address, "a", ":8080", "HTTP server address")
-	flag.StringVar(&config.BaseURL, "b", "http://localhost:8080", "Base URL for shortened links")
+	// Инициализация флагов командной строки
+	addr := flag.String("a", "localhost:8080", "HTTP-адрес сервера")
+	baseURL := flag.String("b", "http://localhost:8080", "Базовый адрес результирующего сокращённого URL")
 	flag.Parse()
 
-	// инициализация полей из переменных окружения
-	if addr := os.Getenv("SERVER_ADDRESS"); addr != "" {
-		config.Address = addr
-	}
-	if url := os.Getenv("BASE_URL"); url != "" {
-		config.BaseURL = url
-	}
-}
+	// Настройка конфигурации на основе флагов
+	cfg.Addr = *addr
+	cfg.BaseURL = *baseURL
 
-func main() {
+	// Создание роутера
 	r := chi.NewRouter()
 	r.Get(`/`, handlers.RedirectURL)
 	r.Post(`/`, handlers.ShortenURL)
 	r.NotFound(handlers.RedirectURL)
 
-	err := http.ListenAndServe(config.Address, r)
+	// Запуск сервера
+	err := http.ListenAndServe(cfg.Addr, r)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
 		os.Exit(1)
