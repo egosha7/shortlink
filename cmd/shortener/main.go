@@ -37,8 +37,8 @@ func main() {
 
 	// Создание роутера
 	r := chi.NewRouter()
-	r.Get(cfg.BaseURL+`/`, handlers.RedirectURL)
-	r.Post(cfg.BaseURL+`/`, handlers.ShortenURL)
+	r.Get(`/`, handlers.RedirectURL)
+	r.Post(`/`, handlers.ShortenURL)
 	r.NotFound(handlers.RedirectURL)
 
 	// Запуск сервера
