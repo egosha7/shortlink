@@ -31,11 +31,6 @@ func ShortenURL(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, shortURL)
-	// Закрытие соединения
-	if cn, ok := w.(http.CloseNotifier); ok {
-		<-cn.CloseNotify()
-		delete(urls, id)
-	}
 }
 
 func RedirectURL(w http.ResponseWriter, r *http.Request) {
@@ -51,9 +46,4 @@ func RedirectURL(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Location", url)
 	w.WriteHeader(http.StatusTemporaryRedirect)
-	// Закрытие соединения
-	if cn, ok := w.(http.CloseNotifier); ok {
-		<-cn.CloseNotify()
-		delete(urls, id)
-	}
 }
