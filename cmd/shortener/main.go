@@ -2,12 +2,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/handlers"
 	"github.com/go-chi/chi"
 	"net/http"
-	"os"
 )
 
 func main() {
@@ -30,9 +28,5 @@ func main() {
 	r.NotFound(handlers.RedirectURL)
 
 	// Запуск сервера
-	err := http.ListenAndServe(cfg.Addr, r)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
-		os.Exit(1)
-	}
+	http.ListenAndServe(cfg.Addr, r)
 }
