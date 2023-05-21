@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"github.com/egosha7/shortlink/internal/OtherFunc"
+	"github.com/egosha7/shortlink/internal/config"
 	"io/ioutil"
 	"net/http"
 )
@@ -23,9 +24,10 @@ func ShortenURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := OtherFunc.GenerateID(6)
+	cfg := config.New()
 
 	urls[id] = string(body)
-	shortURL := fmt.Sprintf("http://localhost:8080/%s", id)
+	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, shortURL)
