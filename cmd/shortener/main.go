@@ -6,8 +6,10 @@ import (
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/handlers"
 	"github.com/go-chi/chi"
+	"net"
 	"net/http"
 	"os"
+	"regexp"
 )
 
 func main() {
@@ -18,6 +20,16 @@ func main() {
 	addr := flag.String("a", "localhost:8080", "HTTP-адрес сервера")
 	baseURL := flag.String("b", "http://localhost:8080", "Базовый адрес результирующего сокращённого URL")
 	flag.Parse()
+
+	// Проверка корректности введенных значений флагов
+	if _, _, err := net.SplitHostPort(*addr); err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid address: %v\n", err)
+		os.Exit(1)
+	}
+	if matched, _ := regexp.MatchString(`^https?://[^\s/$.?#].[^\s]*$`, *baseURL); !matched {
+		fmt.Fprintf(os.Stderr, "Invalid base URL\n")
+		os.Exit(1)
+	}
 
 	// Настройка конфигурации на основе флагов
 	cfg.Addr = *addr
@@ -33,6 +45,6 @@ func main() {
 	err := http.ListenAndServe(cfg.Addr, r)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
-		os.Exit(2)
+		os.Exit(1)
 	}
 }
