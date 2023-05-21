@@ -42,7 +42,7 @@ func main() {
 	r.NotFound(handlers.RedirectURL)
 
 	// Запуск сервера
-	err := http.ListenAndServe("localhost:8080", r)
+	err := http.ListenAndServe(cfg.Addr, r)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
 		os.Exit(1)
