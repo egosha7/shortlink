@@ -17,8 +17,8 @@ func main() {
 	cfg := config.New()
 
 	// Инициализация флагов командной строки
-	addr := flag.String("a", "localhost:8080", "HTTP-адрес сервера")
-	baseURL := flag.String("b", "http://localhost:8080", "Базовый адрес результирующего сокращённого URL")
+	addr := flag.String("a", "localhost", "HTTP-адрес сервера")
+	baseURL := flag.String("b", "http://localhost", "Базовый адрес результирующего сокращённого URL")
 	flag.Parse()
 
 	// Проверка корректности введенных значений флагов
@@ -32,7 +32,7 @@ func main() {
 	}
 
 	// Настройка конфигурации на основе флагов
-	cfg.Addr = *addr
+	cfg.Addr = *addr + ":0" // используем случайный неиспользуемый порт
 	cfg.BaseURL = *baseURL
 
 	// Создание роутера
@@ -42,7 +42,8 @@ func main() {
 	r.NotFound(handlers.RedirectURL)
 
 	// Запуск сервера
-	err := http.ListenAndServe(cfg.Addr, r)
+	server := &http.Server{Addr: cfg.Addr, Handler: r}
+	err := server.ListenAndServe()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
 		os.Exit(1)
