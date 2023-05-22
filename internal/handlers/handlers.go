@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/egosha7/shortlink/internal/config"
+	"github.com/egosha7/shortlink/internal/common/config"
 	"github.com/egosha7/shortlink/internal/otherfunc"
 	"io"
 	"net/http"

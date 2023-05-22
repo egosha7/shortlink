@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/egosha7/shortlink/internal/config"
+	"github.com/egosha7/shortlink/internal/common/config"
 	"github.com/egosha7/shortlink/internal/handlers"
 	"github.com/go-chi/chi"
 	"net"
@@ -17,8 +17,8 @@ func main() {
 	cfg := config.New()
 
 	// Инициализация флагов командной строки
-	addr := flag.String("a", "localhost:8080", "HTTP-адрес сервера")
-	baseURL := flag.String("b", "http://localhost:8080", "Базовый адрес результирующего сокращённого URL")
+	addr := flag.String("a", "", "HTTP-адрес сервера")
+	baseURL := flag.String("b", "", "Базовый адрес результирующего сокращённого URL")
 	flag.Parse()
 
 	if os.Getenv("SERVER_ADDRESS") != "" {
