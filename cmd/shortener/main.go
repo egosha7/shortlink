@@ -42,6 +42,10 @@ func main() {
 	cfg.Addr = *addr
 	cfg.BaseURL = *baseURL
 
+	runServer(cfg)
+}
+
+func runServer(cfg *config.Config) {
 	// Создание роутера
 	r := chi.NewRouter()
 	r.Get(`/`, handlers.RedirectURL)
@@ -54,5 +58,4 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
 		os.Exit(1)
 	}
-
 }
