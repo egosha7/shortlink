@@ -1,4 +1,4 @@
-package OtherFunc
+package otherfunc
 
 import (
 	"math/rand"

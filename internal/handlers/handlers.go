@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/egosha7/shortlink/internal/OtherFunc"
 	"github.com/egosha7/shortlink/internal/config"
-	"io/ioutil"
+	"github.com/egosha7/shortlink/internal/otherfunc"
+	"io"
 	"net/http"
 )
 
@@ -18,19 +18,19 @@ func ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body) // Заменено на io.ReadAll
 	if err != nil {
 		// обработка ошибки
 	}
 
-	id := OtherFunc.GenerateID(6)
+	id := otherfunc.GenerateID(6)
 	cfg := config.New()
 
 	urls[id] = string(body)
 	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, shortURL)
+	fmt.Fprint(w, shortURL) // Заменено на fmt.Fprint
 }
 
 func RedirectURL(w http.ResponseWriter, r *http.Request) {
