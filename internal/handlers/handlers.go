@@ -6,7 +6,6 @@ import (
 	"github.com/egosha7/shortlink/internal/otherfunc"
 	"io"
 	"net/http"
-	"os"
 )
 
 var urls = make(map[string]string)
@@ -21,8 +20,8 @@ func ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body) // Заменено на io.ReadAll
 	if err != nil {
-		fmt.Fprint(os.Stderr, "Invalid body: %v\n", err)
-		os.Exit(1)
+		http.Error(w, "Method not allowed", http.StatusBadGateway)
+		return
 	}
 
 	id := otherfunc.GenerateID(6)
