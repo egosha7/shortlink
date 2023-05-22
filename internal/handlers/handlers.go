@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/egosha7/shortlink/internal/OtherFunc"
 	"github.com/egosha7/shortlink/internal/config"
+	"github.com/go-chi/chi"
 	"io/ioutil"
 	"net/http"
 )
@@ -38,12 +39,13 @@ func RedirectURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	id := r.URL.Path[1:]
-	url, ok := urls[id]
+	shortURL := chi.URLParam(r, "shortURL")
+	url, ok := urls[shortURL]
 	if !ok {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
+	} else {
+		w.Header().Set("Location", url)
+		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
-	w.Header().Set("Location", url)
-	w.WriteHeader(http.StatusTemporaryRedirect)
 }
