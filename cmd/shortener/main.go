@@ -13,11 +13,9 @@ import (
 )
 
 func main() {
-	// Инициализация конфигурации
-	cfg := config.New()
 
 	// Инициализация флагов командной строки
-	addr := flag.String("a", "localhost:8080", "HTTP-адрес сервера")
+	addr := flag.String("a", ":8080", "HTTP-адрес сервера")
 	baseURL := flag.String("b", "http://localhost:8080", "Базовый адрес результирующего сокращённого URL")
 	flag.Parse()
 
@@ -39,17 +37,20 @@ func main() {
 	}
 
 	// Настройка конфигурации на основе флагов
-	cfg.Addr = *addr
-	cfg.BaseURL = *baseURL
-
+	cfg := config.OnFlag(*addr, *baseURL)
 	runServer(cfg)
 }
 
 func runServer(cfg *config.Config) {
 	// Создание роутера
+
 	r := chi.NewRouter()
 	r.Get(`/`, handlers.RedirectURL)
-	r.Post(`/`, handlers.ShortenURL)
+	r.Post(
+		`/`, func(w http.ResponseWriter, r *http.Request) {
+			handlers.ShortenURL(w, r, cfg)
+		},
+	)
 	r.NotFound(handlers.RedirectURL)
 
 	// Запуск сервера
@@ -58,4 +59,5 @@ func runServer(cfg *config.Config) {
 		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
 		os.Exit(1)
 	}
+
 }

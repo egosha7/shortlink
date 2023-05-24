@@ -6,10 +6,17 @@ type Config struct {
 	BaseURL string // Базовый адрес результирующего сокращённого URL
 }
 
-// New - функци для создания новой конфигурации с значениями по умолчанию
-func New() *Config {
+// Default - функци для создания новой конфигурации с значениями по умолчанию
+func Default() *Config {
 	return &Config{
-		Addr:    "localhost:8080",
-		BaseURL: "http://localhost:8080",
+		Addr:    "123",
+		BaseURL: "123",
+	}
+}
+
+func OnFlag(addr string, baseURL string) *Config {
+	return &Config{
+		Addr:    addr,
+		BaseURL: baseURL,
 	}
 }
