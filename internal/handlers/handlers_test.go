@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/egosha7/shortlink/internal/handlers"
+	"github.com/go-chi/chi"
 )
 
 func TestShortenURL(t *testing.T) {
@@ -16,6 +17,8 @@ func TestShortenURL(t *testing.T) {
 		Addr:    "localhost:8080",
 		BaseURL: "http://localhost:8080",
 	}
+	// Указываем экземпляр URLStore
+	store := handlers.NewURLStore()
 
 	// Создаем тестовый запрос
 	body := []byte("http://example.com")
@@ -27,14 +30,18 @@ func TestShortenURL(t *testing.T) {
 	// Создаем тестовый ответ
 	rr := httptest.NewRecorder()
 
-	// Вызываем функцию-обработчик
-	handler := http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg)
+	// Создаем маршрутизатор chi
+	r := chi.NewRouter()
+
+	// Регистрируем обработчик
+	r.HandleFunc(
+		`/`, func(w http.ResponseWriter, r *http.Request) {
+			handlers.ShortenURL(w, r, cfg, store)
 		},
 	)
 
-	handler.ServeHTTP(rr, req)
+	// Вызываем функцию-обработчик
+	r.ServeHTTP(rr, req)
 
 	// Проверяем код ответа
 	if status := rr.Code; status != http.StatusCreated {
@@ -59,7 +66,11 @@ func TestRedirectURL(t *testing.T) {
 		Addr:    "localhost:8080",
 		BaseURL: "http://localhost:8080",
 	}
-	link := "https://example.com"
+
+	// Указываем экземпляр URLStore
+	store := handlers.NewURLStore()
+
+	link := "http://example.com"
 	formData := strings.NewReader(link)
 
 	req, err := http.NewRequest("POST", "/", formData)
@@ -69,14 +80,21 @@ func TestRedirectURL(t *testing.T) {
 
 	req.Header.Set("Content-Type", "text-plain")
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg)
+
+	// Создаем маршрутизатор chi
+	r := chi.NewRouter()
+
+	// Регистрируем обработчик
+	r.Post(
+		"/", func(w http.ResponseWriter, r *http.Request) {
+			handlers.ShortenURL(w, r, cfg, store)
 		},
 	)
 
-	handler.ServeHTTP(rr, req)
+	// Вызываем функцию-обработчик
+	r.ServeHTTP(rr, req)
 
+	// Проверяем код ответа
 	if status := rr.Code; status != http.StatusCreated {
 		t.Errorf(
 			"handler returned wrong status code: got %v want %v",
@@ -88,10 +106,23 @@ func TestRedirectURL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	handler = http.HandlerFunc(handlers.RedirectURL)
-	rr = httptest.NewRecorder()
-	handler.ServeHTTP(rr, req)
 
+	rr = httptest.NewRecorder()
+
+	// Создаем маршрутизатор chi
+	r2 := chi.NewRouter()
+
+	// Регистрируем обработчик для GET-запросов на маршруте /{id}
+	r2.Get(
+		"/{id}", func(w http.ResponseWriter, r *http.Request) {
+			handlers.RedirectURL(w, r, store)
+		},
+	)
+
+	// Вызываем функцию-обработчик
+	r2.ServeHTTP(rr, req)
+
+	// Проверяем код ответа
 	if status := rr.Code; status != http.StatusTemporaryRedirect {
 		t.Errorf(
 			"handler returned wrong status code: got %v want %v",

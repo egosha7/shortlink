@@ -1,57 +1,38 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"github.com/egosha7/shortlink/internal/common/config"
 	"github.com/egosha7/shortlink/internal/handlers"
 	"github.com/go-chi/chi"
-	"net"
 	"net/http"
 	"os"
-	"regexp"
 )
 
 func main() {
-
-	// Инициализация флагов командной строки
-	addr := flag.String("a", ":8080", "HTTP-адрес сервера")
-	baseURL := flag.String("b", "http://localhost:8080", "Базовый адрес результирующего сокращённого URL")
-	flag.Parse()
-
-	if os.Getenv("SERVER_ADDRESS") != "" {
-		*addr = os.Getenv("SERVER_ADDRESS")
-	}
-	if os.Getenv("BASE_URL") != "" {
-		*baseURL = os.Getenv("BASE_URL")
-	}
-
-	// Проверка корректности введенных значений флагов
-	if _, _, err := net.SplitHostPort(*addr); err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid address: %v\n", err)
-		os.Exit(1)
-	}
-	if matched, _ := regexp.MatchString(`^https?://[^\s/$.?#].[^\s]*$`, *baseURL); !matched {
-		fmt.Fprintf(os.Stderr, "Invalid base URL\n")
-		os.Exit(1)
-	}
-
-	// Настройка конфигурации на основе флагов
-	cfg := config.OnFlag(*addr, *baseURL)
+	cfg := config.OnFlag() // Проверка конфигурации флагов и переменных окружения
 	runServer(cfg)
 }
 
 func runServer(cfg *config.Config) {
 	// Создание роутера
-
+	store := handlers.NewURLStore()
 	r := chi.NewRouter()
-	r.Get(`/`, handlers.RedirectURL)
-	r.Post(
-		`/`, func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg)
+	r.HandleFunc(
+		"/{id}", func(w http.ResponseWriter, r *http.Request) {
+			handlers.RedirectURL(w, r, store)
 		},
 	)
-	r.NotFound(handlers.RedirectURL)
+	r.HandleFunc(
+		`/`, func(w http.ResponseWriter, r *http.Request) {
+			handlers.ShortenURL(w, r, cfg, store)
+		},
+	)
+	r.NotFound(
+		func(w http.ResponseWriter, r *http.Request) {
+			handlers.RedirectURL(w, r, store)
+		},
+	)
 
 	// Запуск сервера
 	err := http.ListenAndServe(cfg.Addr, r)
