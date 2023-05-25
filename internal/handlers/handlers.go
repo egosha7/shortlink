@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/egosha7/shortlink/internal/common/config"
-	"github.com/egosha7/shortlink/internal/otherfunc"
+	"github.com/egosha7/shortlink/internal/config"
+	"github.com/egosha7/shortlink/internal/services"
 	"github.com/go-chi/chi"
 	"io"
 	"net/http"
@@ -47,7 +47,14 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, stor
 			return
 		}
 
-		id := otherfunc.GenerateID(6)
+		id := services.GenerateID(6)
+
+		url, ok := store.GetURL(id)
+		if !ok {
+			store.AddURL(id, string(body))
+		} else {
+			fmt.Println("По этому адресу уже зарегистрирован другой адрес: ", url)
+		}
 
 		store.AddURL(id, string(body))
 		shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)

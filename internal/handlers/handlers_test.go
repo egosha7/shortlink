@@ -2,7 +2,7 @@ package handlers_test
 
 import (
 	"bytes"
-	"github.com/egosha7/shortlink/internal/common/config"
+	"github.com/egosha7/shortlink/internal/config"
 	"net/http"
 	"net/http/httptest"
 	"strings"

@@ -2,7 +2,6 @@ package config
 
 import (
 	"flag"
-	"fmt"
 	"github.com/joho/godotenv"
 	"net"
 	"os"
@@ -41,12 +40,10 @@ func OnFlag() *Config {
 
 	// Проверка корректности введенных значений флагов
 	if _, _, err := net.SplitHostPort(*addr); err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid address: %v\n", err)
-		os.Exit(1)
+		panic(err)
 	}
 	if matched, _ := regexp.MatchString(`^https?://[^\s/$.?#].[^\s]*$`, *baseURL); !matched {
-		fmt.Fprintf(os.Stderr, "Invalid base URL \n")
-		os.Exit(1)
+		panic("Invalid base URL")
 	}
 
 	return &Config{
