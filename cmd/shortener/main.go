@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/handlers"
+	"github.com/egosha7/shortlink/internal/loger"
 	"github.com/go-chi/chi"
+	"go.uber.org/zap"
 	"net/http"
 	"os"
 )
@@ -34,11 +36,17 @@ func runServer(cfg *config.Config) {
 		},
 	)
 
-	// Запуск сервера
-	err := http.ListenAndServe(cfg.Addr, r)
+	logger, err := loger.SetupLogger()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error starting server: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error creating logger: %v\n", err)
 		os.Exit(1)
 	}
+	defer logger.Sync()
 
+	// Запуск сервера
+	err = http.ListenAndServe(cfg.Addr, loger.LogMiddleware(logger, r))
+	if err != nil {
+		logger.Error("Error starting server", zap.Error(err))
+		os.Exit(1)
+	}
 }
