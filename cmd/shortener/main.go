@@ -30,6 +30,12 @@ func runServer(cfg *config.Config) {
 			handlers.ShortenURL(w, r, cfg, store)
 		},
 	)
+	r.HandleFunc(
+		`/api/shorten`, func(w http.ResponseWriter, r *http.Request) {
+			handlers.HandleShortenURL(w, r, cfg, store)
+		},
+	)
+
 	r.NotFound(
 		func(w http.ResponseWriter, r *http.Request) {
 			handlers.RedirectURL(w, r, store)

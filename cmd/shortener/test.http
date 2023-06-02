@@ -1,5 +1,7 @@
-POST http://localhost:8080
-Content-Type: text/plain
+POST http://localhost:8080/api/shorten
+Content-Type: application/json
 
-https://example.com
+{
+  "url": "https://practicum.yandex.ru"
+}
 
