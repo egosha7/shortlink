@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/handlers"
@@ -9,11 +10,39 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"os"
+	"strings"
 )
 
 func main() {
 	cfg := config.OnFlag() // Проверка конфигурации флагов и переменных окружения
+	store := handlers.NewURLStore()
+	LoadLinksFromFile(cfg.FileStorage, store)
 	runServer(cfg)
+}
+
+func LoadLinksFromFile(filePath string, store *handlers.URLStore) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.Split(line, ":")
+		if len(parts) == 2 {
+			key := parts[0]
+			value := parts[1]
+			store.AddURL(key, value)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func runServer(cfg *config.Config) {

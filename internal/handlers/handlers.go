@@ -8,6 +8,7 @@ import (
 	"github.com/egosha7/shortlink/internal/services"
 	"github.com/go-chi/chi"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
@@ -188,6 +189,13 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
 		}
 
+		// Добавляем ссылку в файл
+		err = SaveLinksToFile(map[string]string{id: string(req.URL)}, cfg.FileStorage)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return "", fmt.Errorf("Failed to save new data", err)
+		}
+
 		store.AddURL(id, req.URL)
 		shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
 		w.Header().Set("Content-Type", "application/json")
@@ -286,5 +294,47 @@ func (grw *gzipResponseWriter) WriteHeader(statusCode int) {
 // Close закрывает gzip.Writer и завершает запись
 func (grw *gzipResponseWriter) Close() error {
 	grw.gzipWriter.Close()
+	return nil
+}
+
+// SaveLinksToFile сохраняет ссылки в файл (дополняет файл)
+func SaveLinksToFile(links map[string]string, filePath string) error {
+	// Чтение существующих данных из файла
+	existingData, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		// Если файл не существует, просто записываем новые данные
+		return writeLinksToFile(links, filePath)
+	}
+
+	// Распаковка существующих данных в карту ссылок
+	var existingLinks map[string]string
+	err = json.Unmarshal(existingData, &existingLinks)
+	if err != nil {
+		return fmt.Errorf("ошибка при распаковке существующих данных: %v", err)
+	}
+
+	// Объединение существующих ссылок и новых ссылок
+	for code, url := range links {
+		existingLinks[code] = url
+	}
+
+	// Запись обновленных данных в файл
+	return writeLinksToFile(existingLinks, filePath)
+}
+
+// Вспомогательная функция для записи ссылок в файл
+func writeLinksToFile(links map[string]string, filePath string) error {
+	// Преобразование ссылок в JSON
+	data, err := json.Marshal(links)
+	if err != nil {
+		return fmt.Errorf("ошибка при преобразовании ссылок в JSON: %v", err)
+	}
+
+	// Запись данных в файл
+	err = ioutil.WriteFile(filePath, data, 0644)
+	if err != nil {
+		return fmt.Errorf("ошибка при записи данных в файл: %v", err)
+	}
+
 	return nil
 }

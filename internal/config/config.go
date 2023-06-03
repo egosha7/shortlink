@@ -10,15 +10,17 @@ import (
 
 // Config - структура конфигурации приложения
 type Config struct {
-	Addr    string // Адрес сервера
-	BaseURL string // Базовый адрес результирующего сокращённого URL
+	Addr        string // Адрес сервера
+	BaseURL     string // Базовый адрес результирующего сокращённого URL
+	FileStorage string
 }
 
 // Default - функци для создания новой конфигурации с значениями по умолчанию
 func Default() *Config {
 	return &Config{
-		Addr:    "localhost:8080",
-		BaseURL: "http://localhost:8080",
+		Addr:        "localhost:8080",
+		BaseURL:     "http://localhost:8080",
+		FileStorage: "internal/short-url-db.json",
 	}
 }
 
@@ -27,6 +29,7 @@ func OnFlag() *Config {
 	// Инициализация флагов командной строки
 	addr := flag.String("a", defaultValue.Addr, "HTTP-адрес сервера")
 	baseURL := flag.String("b", defaultValue.BaseURL, "Базовый адрес результирующего сокращённого URL")
+	fileStorage := flag.String("fileStorage", defaultValue.FileStorage, "Путь к файлу хранения данных")
 	flag.Parse()
 
 	godotenv.Load()
@@ -36,6 +39,9 @@ func OnFlag() *Config {
 	}
 	if os.Getenv("BASE_URL") != "" {
 		*baseURL = os.Getenv("BASE_URL")
+	}
+	if os.Getenv("FILE_STORAGE_PATH") != "" {
+		*fileStorage = os.Getenv("FILE_STORAGE_PATH")
 	}
 
 	// Проверка корректности введенных значений флагов
