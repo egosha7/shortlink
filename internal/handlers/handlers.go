@@ -7,7 +7,6 @@ import (
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/services"
 	"github.com/go-chi/chi"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -42,92 +41,189 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, stor
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
+	} else if r.Method == "POST" {
+		// Проверяем заголовок Content-Encoding на наличие сжатия gzip
+		if r.Header.Get("Content-Encoding") == "gzip" {
+			// Читаем тело запроса с помощью gzip.NewReader
+			gzipReader, err := gzip.NewReader(r.Body)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+			defer gzipReader.Close()
+
+			// Читаем распакованное тело запроса
+			body, err := ioutil.ReadAll(gzipReader)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+
+			// Используем распакованное тело запроса
+			id := services.GenerateID(6)
+
+			url, ok := store.GetURL(id)
+			if !ok {
+				store.AddURL(id, string(body))
+			} else {
+				fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
+			}
+
+			store.AddURL(id, string(body))
+			shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusCreated)
+			fmt.Fprint(w, shortURL)
+
+		} else {
+			// Читаем тело запроса без сжатия
+			body, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, "Bad Request", http.StatusBadRequest)
+				return
+			}
+
+			// Используем тело запроса
+			id := services.GenerateID(6)
+
+			url, ok := store.GetURL(id)
+			if !ok {
+				store.AddURL(id, string(body))
+			} else {
+				fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
+			}
+
+			store.AddURL(id, string(body))
+			shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
+			w.Header().Set("Content-Type", "text/plain")
+			w.WriteHeader(http.StatusCreated)
+			fmt.Fprint(w, shortURL)
+		}
+
+		// Продолжение кода для обработки запроса
 	}
-
-	// Читаем тело запроса в []byte
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-
-	id := services.GenerateID(6)
-
-	url, ok := store.GetURL(id)
-	if !ok {
-		store.AddURL(id, string(body))
-	} else {
-		fmt.Println("По этому адресу уже зарегистрирован другой адрес: ", url)
-	}
-
-	store.AddURL(id, string(body))
-	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusCreated)
-	fmt.Fprint(w, shortURL)
 }
 
 type ShortenURLRequest struct {
 	URL string `json:"url"`
 }
 
-func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *URLStore) {
+func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *URLStore) (string, error) {
+
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
+		return "", fmt.Errorf("method not allowed")
 	}
 
-	// Читаем тело запроса в структуру ShortenURLRequest
-	var req ShortenURLRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
+	// Проверяем заголовок Content-Encoding на наличие сжатия gzip
+	if r.Header.Get("Content-Encoding") == "gzip" {
+		// Читаем тело запроса с помощью gzip.NewReader
+		gzipReader, err := gzip.NewReader(r.Body)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return "", fmt.Errorf("failed to read request body: %w", err)
+		}
+		defer gzipReader.Close()
 
-	id := services.GenerateID(6)
+		// Читаем распакованное тело запроса
+		body, err := ioutil.ReadAll(gzipReader)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return "", fmt.Errorf("failed to read request body: %w", err)
+		}
 
-	url, ok := store.GetURL(id)
-	if !ok {
+		// Декодируем распакованное тело запроса
+		var req ShortenURLRequest
+		err = json.Unmarshal(body, &req)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return "", fmt.Errorf("failed to decode request body: %w", err)
+		}
+
+		// Используем распакованное тело запроса
+		id := services.GenerateID(6)
+
+		url, ok := store.GetURL(id)
+		if !ok {
+			store.AddURL(id, req.URL)
+		} else {
+			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
+		}
+
 		store.AddURL(id, req.URL)
+		shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+
+		response := struct {
+			Result string `json:"result"`
+		}{
+			Result: shortURL,
+		}
+
+		err = json.NewEncoder(w).Encode(response)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return "", fmt.Errorf("failed to encode response: %w", err)
+		}
+
+		return shortURL, nil
+
 	} else {
-		fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
-	}
+		// Читаем тело запроса без сжатия
+		var req ShortenURLRequest
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return "", fmt.Errorf("failed to decode request body: %w", err)
+		}
 
-	store.AddURL(id, req.URL)
-	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+		// Используем тело запроса
+		id := services.GenerateID(6)
 
-	response := struct {
-		Result string `json:"result"`
-	}{
-		Result: shortURL,
-	}
+		url, ok := store.GetURL(id)
+		if !ok {
+			store.AddURL(id, req.URL)
+		} else {
+			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
+		}
 
-	err = json.NewEncoder(w).Encode(response)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
+		store.AddURL(id, req.URL)
+		shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+
+		response := struct {
+			Result string `json:"result"`
+		}{
+			Result: shortURL,
+		}
+
+		err = json.NewEncoder(w).Encode(response)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return "", fmt.Errorf("failed to encode response: %w", err)
+		}
+
+		return shortURL, nil
 	}
 }
 
 func RedirectURL(w http.ResponseWriter, r *http.Request, store *URLStore) {
+
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
+	} else if r.Method == "GET" {
+		id := chi.URLParam(r, "id")
+		url, ok := store.GetURL(id)
+		if !ok {
+			http.Error(w, "Invalid URL", http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Location", url)
+		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
-
-	id := chi.URLParam(r, "id")
-	url, ok := store.GetURL(id)
-	if !ok {
-		http.Error(w, "Invalid URL", http.StatusBadRequest)
-		return
-	}
-	w.Header().Set("Location", url)
-	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
 func GzipMiddleware(next http.Handler) http.Handler {
@@ -156,6 +252,14 @@ func GzipMiddleware(next http.Handler) http.Handler {
 	)
 }
 
+// NewGzipResponseWriter создает новый gzipResponseWriter поверх ResponseWriter
+func NewGzipResponseWriter(w http.ResponseWriter) *gzipResponseWriter {
+	return &gzipResponseWriter{
+		ResponseWriter: w,
+		gzipWriter:     gzip.NewWriter(w),
+	}
+}
+
 // gzipResponseWriter оборачивает http.ResponseWriter для поддержки сжатия gzip
 type gzipResponseWriter struct {
 	http.ResponseWriter
@@ -167,19 +271,20 @@ func (grw *gzipResponseWriter) Write(b []byte) (int, error) {
 	return grw.gzipWriter.Write(b)
 }
 
-// WriteHeader записывает заголовки и код состояния ответа
-func (grw *gzipResponseWriter) WriteHeader(code int) {
-	// Если клиент не поддерживает сжатие gzip, отправляем несжатый ответ
-	if code != http.StatusNoContent && code != http.StatusNotModified && code >= 200 && grw.Header().Get("Content-Encoding") != "gzip" {
-		grw.ResponseWriter.Header().Del("Content-Encoding")
-		grw.gzipWriter.Reset(ioutil.Discard)
-		grw.ResponseWriter.WriteHeader(code)
-	} else {
-		grw.ResponseWriter.WriteHeader(code)
-	}
-}
-
 // Header возвращает заголовки ResponseWriter
 func (grw *gzipResponseWriter) Header() http.Header {
 	return grw.ResponseWriter.Header()
+}
+
+// WriteHeader записывает статусный код ответа
+func (grw *gzipResponseWriter) WriteHeader(statusCode int) {
+	grw.ResponseWriter.Header().Del("Content-Length")
+	grw.ResponseWriter.Header().Set("Content-Encoding", "gzip")
+	grw.ResponseWriter.WriteHeader(statusCode)
+}
+
+// Close закрывает gzip.Writer и завершает запись
+func (grw *gzipResponseWriter) Close() error {
+	grw.gzipWriter.Close()
+	return nil
 }
