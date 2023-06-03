@@ -21,6 +21,8 @@ func runServer(cfg *config.Config) {
 	// Создание роутера
 	store := handlers.NewURLStore()
 	r := chi.NewRouter()
+
+	r.Use(gzipMiddleware)
 	r.HandleFunc(
 		"/{id}", func(w http.ResponseWriter, r *http.Request) {
 			handlers.RedirectURL(w, r, store)
@@ -49,9 +51,6 @@ func runServer(cfg *config.Config) {
 		os.Exit(1)
 	}
 	defer logger.Sync()
-
-	// Добавление middleware для сжатия gzip
-	r.Use(gzipMiddleware)
 
 	// Запуск сервера
 	err = http.ListenAndServe(cfg.Addr, loger.LogMiddleware(logger, r))
