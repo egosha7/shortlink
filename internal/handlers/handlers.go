@@ -7,7 +7,7 @@ import (
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/services"
 	"github.com/go-chi/chi"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"sync"
@@ -53,7 +53,7 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, stor
 			defer gzipReader.Close()
 
 			// Читаем распакованное тело запроса
-			body, err := ioutil.ReadAll(gzipReader)
+			body, err := io.ReadAll(gzipReader)
 			if err != nil {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
@@ -77,7 +77,7 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, stor
 
 		} else {
 			// Читаем тело запроса без сжатия
-			body, err := ioutil.ReadAll(r.Body)
+			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
@@ -126,7 +126,7 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 		defer gzipReader.Close()
 
 		// Читаем распакованное тело запроса
-		body, err := ioutil.ReadAll(gzipReader)
+		body, err := io.ReadAll(gzipReader)
 		if err != nil {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return "", fmt.Errorf("failed to read request body: %w", err)
