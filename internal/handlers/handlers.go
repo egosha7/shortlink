@@ -8,7 +8,9 @@ import (
 	"github.com/egosha7/shortlink/internal/services"
 	"github.com/go-chi/chi"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -114,19 +116,55 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 
 	return shortURL, nil
 }
-
 func RedirectURL(w http.ResponseWriter, r *http.Request, store *URLStore) {
-
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
-	} else if r.Method == "GET" {
+	}
+
+	// Проверяем, содержит ли запрос заголовок Accept-Encoding со значением gzip
+	if r.Header.Get("Accept-Encoding") == "gzip" {
+		// Если клиент поддерживает gzip, добавляем заголовок Content-Encoding
+		w.Header().Set("Content-Encoding", "gzip")
+
+		// Читаем URL из хранилища
 		id := chi.URLParam(r, "id")
 		url, ok := store.GetURL(id)
 		if !ok {
 			http.Error(w, "Invalid URL", http.StatusBadRequest)
 			return
 		}
+
+		// Создаем gzip.Reader для чтения сжатых данных
+		gzr, err := gzip.NewReader(strings.NewReader(url))
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		defer gzr.Close()
+
+		// Читаем сжатые данные и записываем их в ResponseWriter
+		data, err := ioutil.ReadAll(gzr)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		// Записываем данные в ResponseWriter
+		_, err = w.Write(data)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Если клиент не поддерживает gzip, просто перенаправляем на URL
+		id := chi.URLParam(r, "id")
+		url, ok := store.GetURL(id)
+		if !ok {
+			http.Error(w, "Invalid URL", http.StatusBadRequest)
+			return
+		}
+
 		w.Header().Set("Location", url)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
