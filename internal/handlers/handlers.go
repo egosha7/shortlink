@@ -8,6 +8,7 @@ import (
 	"github.com/egosha7/shortlink/internal/services"
 	"github.com/go-chi/chi"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
@@ -168,7 +169,14 @@ func (grw *gzipResponseWriter) Write(b []byte) (int, error) {
 
 // WriteHeader записывает заголовки и код состояния ответа
 func (grw *gzipResponseWriter) WriteHeader(code int) {
-	grw.ResponseWriter.WriteHeader(code)
+	// Если клиент не поддерживает сжатие gzip, отправляем несжатый ответ
+	if code != http.StatusNoContent && code != http.StatusNotModified && code >= 200 && grw.Header().Get("Content-Encoding") != "gzip" {
+		grw.ResponseWriter.Header().Del("Content-Encoding")
+		grw.gzipWriter.Reset(ioutil.Discard)
+		grw.ResponseWriter.WriteHeader(code)
+	} else {
+		grw.ResponseWriter.WriteHeader(code)
+	}
 }
 
 // Header возвращает заголовки ResponseWriter
