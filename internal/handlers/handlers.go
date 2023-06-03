@@ -8,7 +8,6 @@ import (
 	"github.com/egosha7/shortlink/internal/services"
 	"github.com/go-chi/chi"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
@@ -42,51 +41,50 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, stor
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
-	} else if r.Method == "POST" {
-		defer r.Body.Close()
-
-		body, err := io.ReadAll(r.Body) // Заменено на io.ReadAll
-		if err != nil {
-			http.Error(w, " not allowed", http.StatusBadGateway)
-			return
-		}
-
-		id := services.GenerateID(6)
-
-		url, ok := store.GetURL(id)
-		if !ok {
-			store.AddURL(id, string(body))
-		} else {
-			fmt.Println("По этому адресу уже зарегистрирован другой адрес: ", url)
-		}
-
-		store.AddURL(id, string(body))
-		shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusCreated)
-		fmt.Fprint(w, shortURL)
 	}
+
+	// Читаем тело запроса в []byte
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	id := services.GenerateID(6)
+
+	url, ok := store.GetURL(id)
+	if !ok {
+		store.AddURL(id, string(body))
+	} else {
+		fmt.Println("По этому адресу уже зарегистрирован другой адрес: ", url)
+	}
+
+	store.AddURL(id, string(body))
+	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprint(w, shortURL)
 }
 
 type ShortenURLRequest struct {
 	URL string `json:"url"`
 }
 
-func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *URLStore) (string, error) {
-
+func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *URLStore) {
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return "", fmt.Errorf("method not allowed")
+		return
 	}
 
-	defer r.Body.Close()
-
+	// Читаем тело запроса в структуру ShortenURLRequest
 	var req ShortenURLRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return "", fmt.Errorf("failed to decode request body: %w", err)
+		return
 	}
+	defer r.Body.Close()
 
 	id := services.GenerateID(6)
 
@@ -111,71 +109,50 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return "", fmt.Errorf("failed to encode response: %w", err)
+		return
 	}
-
-	return shortURL, nil
 }
+
 func RedirectURL(w http.ResponseWriter, r *http.Request, store *URLStore) {
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Проверяем, содержит ли запрос заголовок Accept-Encoding со значением gzip
-	if r.Header.Get("Accept-Encoding") == "gzip" {
-		// Если клиент поддерживает gzip, добавляем заголовок Content-Encoding
-		w.Header().Set("Content-Encoding", "gzip")
-
-		// Читаем URL из хранилища
-		id := chi.URLParam(r, "id")
-		url, ok := store.GetURL(id)
-		if !ok {
-			http.Error(w, "Invalid URL", http.StatusBadRequest)
-			return
-		}
-
-		// Создаем gzip.Reader для чтения сжатых данных
-		gzr, err := gzip.NewReader(strings.NewReader(url))
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-		defer gzr.Close()
-
-		// Читаем сжатые данные и записываем их в ResponseWriter
-		data, err := ioutil.ReadAll(gzr)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-
-		// Записываем данные в ResponseWriter
-		_, err = w.Write(data)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
-	} else {
-		// Если клиент не поддерживает gzip, просто перенаправляем на URL
-		id := chi.URLParam(r, "id")
-		url, ok := store.GetURL(id)
-		if !ok {
-			http.Error(w, "Invalid URL", http.StatusBadRequest)
-			return
-		}
-
-		w.Header().Set("Location", url)
-		w.WriteHeader(http.StatusTemporaryRedirect)
+	id := chi.URLParam(r, "id")
+	url, ok := store.GetURL(id)
+	if !ok {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
 	}
+	w.Header().Set("Location", url)
+	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-// NewGzipResponseWriter создает новый gzip.Writer поверх ResponseWriter
-func NewGzipResponseWriter(w http.ResponseWriter) *gzipResponseWriter {
-	return &gzipResponseWriter{
-		ResponseWriter: w,
-		gzipWriter:     gzip.NewWriter(w),
-	}
+func GzipMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			// Проверяем заголовок Accept-Encoding для поддержки сжатия gzip
+			encodings := r.Header.Get("Accept-Encoding")
+			if strings.Contains(encodings, "gzip") {
+				// Устанавливаем заголовок Content-Encoding для указания сжатия gzip
+				w.Header().Set("Content-Encoding", "gzip")
+
+				// Создаем новый gzipResponseWriter
+				gzipWriter := gzip.NewWriter(w)
+				defer gzipWriter.Close()
+
+				// Обновляем ResponseWriter для использования gzipResponseWriter
+				w = &gzipResponseWriter{
+					ResponseWriter: w,
+					gzipWriter:     gzipWriter,
+				}
+			}
+
+			// Вызываем следующий обработчик в цепочке
+			next.ServeHTTP(w, r)
+		},
+	)
 }
 
 // gzipResponseWriter оборачивает http.ResponseWriter для поддержки сжатия gzip
@@ -189,13 +166,12 @@ func (grw *gzipResponseWriter) Write(b []byte) (int, error) {
 	return grw.gzipWriter.Write(b)
 }
 
+// WriteHeader записывает заголовки и код состояния ответа
+func (grw *gzipResponseWriter) WriteHeader(code int) {
+	grw.ResponseWriter.WriteHeader(code)
+}
+
 // Header возвращает заголовки ResponseWriter
 func (grw *gzipResponseWriter) Header() http.Header {
 	return grw.ResponseWriter.Header()
-}
-
-// Close закрывает gzip.Writer и завершает запись
-func (grw *gzipResponseWriter) Close() error {
-	grw.gzipWriter.Close()
-	return nil
 }
