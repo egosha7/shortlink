@@ -70,6 +70,12 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, stor
 				fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
 			}
 
+			// Добавляем ссылку в файл
+			err = SaveLinksToFile(map[string]string{id: string(body)}, cfg.FileStorage)
+			if err != nil {
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			}
+
 			store.AddURL(id, string(body))
 			shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
 			w.Header().Set("Content-Type", "text/plain")
@@ -187,13 +193,6 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 			store.AddURL(id, req.URL)
 		} else {
 			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
-		}
-
-		// Добавляем ссылку в файл
-		err = SaveLinksToFile(map[string]string{id: string(req.URL)}, cfg.FileStorage)
-		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return "", fmt.Errorf("Failed to save new data", err)
 		}
 
 		store.AddURL(id, req.URL)
