@@ -71,6 +71,7 @@ type ShortenURLRequest struct {
 }
 
 func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *URLStore) (string, error) {
+
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return "", fmt.Errorf("method not allowed")
@@ -96,7 +97,7 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 
 	store.AddURL(id, req.URL)
 	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
-
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
 	response := struct {
@@ -115,6 +116,7 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 }
 
 func RedirectURL(w http.ResponseWriter, r *http.Request, store *URLStore) {
+
 	if r.Method != "GET" {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
