@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -49,10 +50,34 @@ func runServer(cfg *config.Config) {
 	}
 	defer logger.Sync()
 
+	// Добавление middleware для сжатия gzip
+	r.Use(gzipMiddleware)
+
 	// Запуск сервера
 	err = http.ListenAndServe(cfg.Addr, loger.LogMiddleware(logger, r))
 	if err != nil {
 		logger.Error("Error starting server", zap.Error(err))
 		os.Exit(1)
 	}
+}
+
+// gzipMiddleware обрабатывает сжатие gzip для запросов и ответов
+func gzipMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			// Проверяем заголовок Accept-Encoding клиента на наличие gzip
+			if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+				// Если клиент поддерживает gzip, добавляем заголовок Content-Encoding
+				w.Header().Set("Content-Encoding", "gzip")
+				// Создаем gzip.Writer поверх текущего ResponseWriter
+				gz := handlers.NewGzipResponseWriter(w)
+				defer gz.Close()
+				// Передаем обработку запроса и сжатый ResponseWriter следующему обработчику
+				next.ServeHTTP(gz, r)
+			} else {
+				// Если клиент не поддерживает gzip, просто передаем управление следующему обработчику
+				next.ServeHTTP(w, r)
+			}
+		},
+	)
 }

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"github.com/egosha7/shortlink/internal/config"
@@ -127,4 +128,34 @@ func RedirectURL(w http.ResponseWriter, r *http.Request, store *URLStore) {
 		w.Header().Set("Location", url)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
+}
+
+// NewGzipResponseWriter создает новый gzip.Writer поверх ResponseWriter
+func NewGzipResponseWriter(w http.ResponseWriter) *gzipResponseWriter {
+	return &gzipResponseWriter{
+		ResponseWriter: w,
+		gzipWriter:     gzip.NewWriter(w),
+	}
+}
+
+// gzipResponseWriter оборачивает http.ResponseWriter для поддержки сжатия gzip
+type gzipResponseWriter struct {
+	http.ResponseWriter
+	gzipWriter *gzip.Writer
+}
+
+// Write перехватывает запись данных и передает их в gzip.Writer
+func (grw *gzipResponseWriter) Write(b []byte) (int, error) {
+	return grw.gzipWriter.Write(b)
+}
+
+// Header возвращает заголовки ResponseWriter
+func (grw *gzipResponseWriter) Header() http.Header {
+	return grw.ResponseWriter.Header()
+}
+
+// Close закрывает gzip.Writer и завершает запись
+func (grw *gzipResponseWriter) Close() error {
+	grw.gzipWriter.Close()
+	return nil
 }
