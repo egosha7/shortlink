@@ -87,6 +87,25 @@ func (s *URLStore) LoadFromFile() error {
 		return err
 	}
 
+	// Устанавливаем позицию указателя файла в начало
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		return err
+	}
+
+	// Обрезаем содержимое файла до 0 байтов
+	err = file.Truncate(0)
+	if err != nil {
+		return err
+	}
+
+	// Запись начальных данных в файл
+	initialData := []byte("[{\"ID\":\"def456\",\"URL\":\"https://google.com\"}]")
+	_, err = file.Write(initialData)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
