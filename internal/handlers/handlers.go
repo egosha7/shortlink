@@ -91,15 +91,22 @@ func (s *URLStore) LoadFromFile() error {
 }
 
 func (s *URLStore) SaveToFile() error {
-	file, err := os.Create(s.filePath)
+	// Открываем файл в режиме добавления, если файл не существует, он будет создан
+	file, err := os.OpenFile(s.filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	err = json.NewEncoder(file).Encode(s.urls)
-	if err != nil {
-		return err
+	// Записываем данные по идентификатору в файл
+	for id, url := range s.urls {
+		// Формируем строку в формате JSON
+		data := fmt.Sprintf(`{"ID": "%s", "URL": "%s"}`, id, url)
+		// Записываем строку в конец файла
+		_, err := file.WriteString(data + "\n")
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -136,8 +143,6 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, stor
 			} else {
 				fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
 			}
-
-			store.AddURL(id, string(body))
 			shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusCreated)
@@ -160,8 +165,6 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, stor
 			} else {
 				fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
 			}
-
-			store.AddURL(id, string(body))
 			shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusCreated)
