@@ -58,6 +58,11 @@ func (s *URLStore) GetURL(id string) (string, bool) {
 
 func (s *URLStore) LoadFromFile() error {
 
+	// Проверка наличия флага или переменной окружения
+	if s.filePath == "" {
+		return nil // Если значение не установлено, выходим без загрузки данных
+	}
+
 	// Проверка существования файла
 	if _, err := os.Stat(s.filePath); os.IsNotExist(err) {
 		// Создание нового файла
@@ -91,6 +96,11 @@ func (s *URLStore) LoadFromFile() error {
 }
 
 func (s *URLStore) SaveToFile() error {
+	// Проверка наличия флага или переменной окружения
+	if s.filePath == "" {
+		return nil // Если значение не установлено, выходим без сохранения на диск
+	}
+
 	file, err := os.Create(s.filePath)
 	if err != nil {
 		return err
@@ -159,14 +169,11 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, stor
 				fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
 			}
 
-			store.AddURL(id, string(body))
 			shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusCreated)
 			fmt.Fprint(w, shortURL)
 		}
-
-		// Продолжение кода для обработки запроса
 	}
 }
 

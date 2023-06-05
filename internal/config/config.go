@@ -21,7 +21,7 @@ func Default() *Config {
 	return &Config{
 		Addr:     "localhost:8080",
 		BaseURL:  "http://localhost:8080",
-		FilePath: "tmp\\some4.json",
+		FilePath: "",
 	}
 }
 
