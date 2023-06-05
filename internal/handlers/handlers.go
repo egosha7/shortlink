@@ -91,22 +91,15 @@ func (s *URLStore) LoadFromFile() error {
 }
 
 func (s *URLStore) SaveToFile() error {
-	// Открываем файл в режиме добавления, если файл не существует, он будет создан
-	file, err := os.OpenFile(s.filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	file, err := os.Create(s.filePath)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	// Записываем данные по идентификатору в файл
-	for id, url := range s.urls {
-		// Формируем строку в формате JSON
-		data := fmt.Sprintf(`{"ID": "%s", "URL": "%s"}`, id, url)
-		// Записываем строку в конец файла
-		_, err := file.WriteString(data + "\n")
-		if err != nil {
-			return err
-		}
+	err = json.NewEncoder(file).Encode(s.urls)
+	if err != nil {
+		return err
 	}
 
 	return nil
