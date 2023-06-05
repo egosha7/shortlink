@@ -14,11 +14,12 @@ import (
 
 func TestShortenURL(t *testing.T) {
 	cfg := &config.Config{
-		Addr:    "localhost:8080",
-		BaseURL: "http://localhost:8080",
+		Addr:     "localhost:8080",
+		BaseURL:  "http://localhost:8080",
+		FilePath: "C:\\Users\\eg898\\shortlink\\cmd\\shortener\\tmp\\some.json",
 	}
 	// Указываем экземпляр URLStore
-	store := handlers.NewURLStore()
+	store := handlers.NewURLStore(cfg.FilePath)
 
 	// Создаем тестовый запрос
 	body := []byte("http://example.com")
@@ -63,12 +64,13 @@ func TestShortenURL(t *testing.T) {
 
 func TestRedirectURL(t *testing.T) {
 	cfg := &config.Config{
-		Addr:    "localhost:8080",
-		BaseURL: "http://localhost:8080",
+		Addr:     "localhost:8080",
+		BaseURL:  "http://localhost:8080",
+		FilePath: "C:\\Users\\eg898\\shortlink\\cmd\\shortener\\tmp\\some.json",
 	}
 
 	// Указываем экземпляр URLStore
-	store := handlers.NewURLStore()
+	store := handlers.NewURLStore(cfg.FilePath)
 
 	link := "http://example.com"
 	formData := strings.NewReader(link)

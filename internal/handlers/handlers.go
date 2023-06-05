@@ -9,32 +9,83 @@ import (
 	"github.com/go-chi/chi"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 )
 
-type URLStore struct {
-	urls map[string]string
-	mu   sync.RWMutex
+type URL struct {
+	ID  string
+	URL string
 }
 
-func NewURLStore() *URLStore {
+type URLStore struct {
+	urls     []URL
+	mu       sync.RWMutex
+	filePath string
+}
+
+func NewURLStore(filePath string) *URLStore {
 	return &URLStore{
-		urls: make(map[string]string),
+		urls:     make([]URL, 0),
+		filePath: filePath,
 	}
 }
 
 func (s *URLStore) AddURL(id, url string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.urls[id] = url
+	newURL := URL{ID: id, URL: url}
+	s.urls = append(s.urls, newURL)
+
+	// Сохранение данных в файл
+	err := s.SaveToFile()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error saving data to file: %v\n", err)
+	}
 }
 
 func (s *URLStore) GetURL(id string) (string, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	url, ok := s.urls[id]
-	return url, ok
+	for _, u := range s.urls {
+		if u.ID == id {
+			return u.URL, true
+		}
+	}
+	return "", false
+}
+
+func (s *URLStore) LoadFromFile() error {
+
+	// Открываем файл
+	file, err := os.OpenFile(s.filePath, os.O_RDONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	err = json.NewDecoder(file).Decode(&s.urls)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *URLStore) SaveToFile() error {
+	file, err := os.Create(s.filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	err = json.NewEncoder(file).Encode(s.urls)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *URLStore) {

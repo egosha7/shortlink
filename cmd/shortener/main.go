@@ -18,7 +18,15 @@ func main() {
 
 func runServer(cfg *config.Config) {
 	// Создание роутера
-	store := handlers.NewURLStore()
+	store := handlers.NewURLStore(cfg.FilePath)
+
+	// Загрузка данных из файла
+	err := store.LoadFromFile()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading data from file: %v\n", err)
+		os.Exit(1)
+	}
+
 	r := chi.NewRouter()
 	r.Use(handlers.GzipMiddleware)
 	r.HandleFunc(
