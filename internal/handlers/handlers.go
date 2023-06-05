@@ -57,16 +57,14 @@ func (s *URLStore) GetURL(id string) (string, bool) {
 }
 
 func (s *URLStore) LoadFromFile() error {
-
-	// Открываем файл
-	file, err := os.OpenFile(s.filePath, os.O_RDONLY|os.O_CREATE, 0644)
+	file, err := os.Open(s.filePath)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
 	err = json.NewDecoder(file).Decode(&s.urls)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		return err
 	}
 
