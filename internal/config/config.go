@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"github.com/joho/godotenv"
 	"net"
 	"os"
@@ -20,7 +21,7 @@ func Default() *Config {
 	return &Config{
 		Addr:     "localhost:8080",
 		BaseURL:  "http://localhost:8080",
-		FilePath: "C:\\Users\\eg898\\shortlink\\cmd\\shortener\\tmp\\some.json",
+		FilePath: "tmp\\some.json",
 	}
 }
 
@@ -44,6 +45,23 @@ func OnFlag() *Config {
 		*filePath = os.Getenv("FILE_STORAGE_PATH")
 	}
 
+	// Проверка существования файла
+	if _, err := os.Stat(*filePath); os.IsNotExist(err) {
+		// Файл не существует
+		fmt.Println("Файл не найден")
+	} else {
+		// Файл существует
+
+		// Проверка прав доступа к файлу
+		if err := checkFileAccess(*filePath); err != nil {
+			// Ошибка доступа к файлу
+			fmt.Println("Ошибка доступа к файлу:", err)
+		} else {
+			// Файл существует и доступен для чтения
+			fmt.Println("Файл существует и доступен для чтения")
+		}
+	}
+
 	// Проверка корректности введенных значений флагов
 	if _, _, err := net.SplitHostPort(*addr); err != nil {
 		panic(err)
@@ -57,4 +75,14 @@ func OnFlag() *Config {
 		BaseURL:  *baseURL,
 		FilePath: *filePath,
 	}
+}
+
+// Функция для проверки доступа к файлу
+func checkFileAccess(filePath string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	return nil
 }
