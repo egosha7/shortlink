@@ -16,7 +16,7 @@ func TestShortenURL(t *testing.T) {
 	cfg := &config.Config{
 		Addr:     "localhost:8080",
 		BaseURL:  "http://localhost:8080",
-		FilePath: "C:\\Users\\eg898\\shortlink\\cmd\\shortener\\tmp\\some.json",
+		FilePath: "tmp\\some3.json",
 	}
 	// Указываем экземпляр URLStore
 	store := handlers.NewURLStore(cfg.FilePath)
@@ -66,7 +66,7 @@ func TestRedirectURL(t *testing.T) {
 	cfg := &config.Config{
 		Addr:     "localhost:8080",
 		BaseURL:  "http://localhost:8080",
-		FilePath: "C:\\Users\\eg898\\shortlink\\cmd\\shortener\\tmp\\some.json",
+		FilePath: "tmp\\some3.json",
 	}
 
 	// Указываем экземпляр URLStore
