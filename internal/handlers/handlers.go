@@ -58,6 +58,23 @@ func (s *URLStore) GetURL(id string) (string, bool) {
 
 func (s *URLStore) LoadFromFile() error {
 
+	// Проверка существования файла
+	if _, err := os.Stat(s.filePath); os.IsNotExist(err) {
+		// Создание нового файла
+		file, err := os.Create(s.filePath)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		// Запись начальных данных в файл
+		initialData := []byte("[{\"ID\":\"def456\",\"URL\":\"https://google.com\"}]")
+		_, err = file.Write(initialData)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Открываем файл
 	file, err := os.OpenFile(s.filePath, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
