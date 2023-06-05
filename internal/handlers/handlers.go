@@ -158,6 +158,8 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, stor
 			} else {
 				fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
 			}
+
+			store.AddURL(id, string(body))
 			shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
 			w.Header().Set("Content-Type", "text/plain")
 			w.WriteHeader(http.StatusCreated)
