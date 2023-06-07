@@ -50,7 +50,6 @@ func (s *URLStore) GetURL(id string) (string, bool) {
 }
 
 func (s *URLStore) LoadFromFile() error {
-
 	// Проверка наличия флага или переменной окружения
 	if s.filePath == "" {
 		return nil // Если значение не установлено, выходим без загрузки данных
@@ -64,25 +63,30 @@ func (s *URLStore) LoadFromFile() error {
 			return err
 		}
 		defer file.Close()
-
-		// Запись начальных данных в файл
-		initialData := []byte("[{\"ID\":\"def456\",\"URL\":\"https://google.com\"}]")
-		_, err = file.Write(initialData)
-		if err != nil {
-			return err
-		}
 	}
 
 	// Открываем файл
-	file, err := os.OpenFile(s.filePath, os.O_RDONLY|os.O_CREATE, 0666)
+	file, err := os.OpenFile(s.filePath, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	err = json.NewDecoder(file).Decode(&s.urls)
+	// Читаем данные из файла
+	fileInfo, err := file.Stat()
 	if err != nil {
 		return err
+	}
+
+	if fileInfo.Size() == 0 {
+		// Если файл пуст, инициализируем пустой срез URL
+		s.urls = []URL{}
+	} else {
+		// Если файл содержит данные, декодируем их из файла в срез URL
+		err = json.NewDecoder(file).Decode(&s.urls)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
