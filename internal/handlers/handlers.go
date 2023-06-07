@@ -86,7 +86,6 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 		return "", fmt.Errorf("method not allowed")
 	}
 
-	// Проверяем заголовок Content-Encoding на наличие сжатия gzip
 	if r.Header.Get("Content-Encoding") == "gzip" {
 		// Читаем тело запроса с помощью gzip.NewReader
 		gzipReader, err := gzip.NewReader(r.Body)
@@ -96,16 +95,9 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 		}
 		defer gzipReader.Close()
 
-		// Читаем распакованное тело запроса
-		body, err := io.ReadAll(gzipReader)
-		if err != nil {
-			http.Error(w, "Bad Request", http.StatusBadRequest)
-			return "", fmt.Errorf("failed to read request body: %w", err)
-		}
-
 		// Декодируем распакованное тело запроса
 		var req ShortenURLRequest
-		err = json.Unmarshal(body, &req)
+		err = json.NewDecoder(gzipReader).Decode(&req)
 		if err != nil {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return "", fmt.Errorf("failed to decode request body: %w", err)
