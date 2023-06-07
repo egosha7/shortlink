@@ -5,6 +5,7 @@ import (
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/handlers"
 	"github.com/egosha7/shortlink/internal/loger"
+	"github.com/egosha7/shortlink/internal/storage"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
 	"net/http"
@@ -18,7 +19,7 @@ func main() {
 
 func runServer(cfg *config.Config) {
 	// Создание роутера
-	store := handlers.NewURLStore(cfg.FilePath)
+	store := storage.NewURLStore(cfg.FilePath)
 
 	// Загрузка данных из файла
 	err := store.LoadFromFile()
