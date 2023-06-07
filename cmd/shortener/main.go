@@ -14,11 +14,8 @@ import (
 
 func main() {
 	cfg := config.OnFlag() // Проверка конфигурации флагов и переменных окружения
-	runServer(cfg)
-}
 
-func runServer(cfg *config.Config) {
-	// Создание роутера
+	// Создание хранилища
 	store := storage.NewURLStore(cfg.FilePath)
 
 	// Загрузка данных из файла
@@ -28,6 +25,7 @@ func runServer(cfg *config.Config) {
 		os.Exit(1)
 	}
 
+	// Создание роутера
 	r := chi.NewRouter()
 	r.Use(handlers.GzipMiddleware)
 	r.HandleFunc(
