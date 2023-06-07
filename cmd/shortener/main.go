@@ -13,7 +13,7 @@ import (
 
 func main() {
 	cfg := config.OnFlag() // Проверка конфигурации флагов и переменных окружения
-	runServer(cfg)
+	runServer(cfg)         // Загрузка сервера
 }
 
 func runServer(cfg *config.Config) {
