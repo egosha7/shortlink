@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"bytes"
 	"compress/gzip"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/egosha7/shortlink/internal/config"
@@ -78,14 +80,21 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 }
 
 func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
-
 	id := chi.URLParam(r, "id")
 	url, ok := store.GetURL(id)
 	if !ok {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
-	w.Header().Set("Location", url)
+
+	if r.Header.Get("Content-Encoding") == "gzip" {
+		compressedURL := compressURL(url)
+		w.Header().Set("Location", compressedURL)
+		w.Header().Set("Content-Encoding", "gzip")
+	} else {
+		w.Header().Set("Location", url)
+	}
+
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
@@ -96,7 +105,7 @@ func GzipMiddleware(next http.Handler) http.Handler {
 			encodings := r.Header.Get("Accept-Encoding")
 			if strings.Contains(encodings, "gzip") {
 				// Устанавливаем заголовок Content-Encoding для указания сжатия gzip
-				r.Header.Set("Content-Encoding", "gzip")
+				w.Header().Set("Content-Encoding", "gzip")
 
 				// Создаем новый gzipResponseWriter
 				gzipWriter := gzip.NewWriter(w)
@@ -113,6 +122,15 @@ func GzipMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		},
 	)
+}
+
+func compressURL(url string) string {
+	var b bytes.Buffer
+	gzipWriter := gzip.NewWriter(&b)
+	defer gzipWriter.Close()
+	gzipWriter.Write([]byte(url))
+	gzipWriter.Flush()
+	return base64.StdEncoding.EncodeToString(b.Bytes())
 }
 
 // NewGzipResponseWriter создает новый gzipResponseWriter поверх ResponseWriter
