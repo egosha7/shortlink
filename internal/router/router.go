@@ -14,21 +14,9 @@ func SetupRoutes(cfg *config.Config, store *storage.URLStore) http.Handler {
 	// Создание роутера
 	r := chi.NewRouter()
 	r.Use(handlers.GzipMiddleware)
-	r.MethodFunc(
-		"GET", "/{id}", func(w http.ResponseWriter, r *http.Request) {
-			handlers.RedirectURL(store)
-		},
-	)
-	r.MethodFunc(
-		"POST", "/", func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(cfg, store)
-		},
-	)
-	r.MethodFunc(
-		"POST", "/api/shorten", func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleShortenURL(cfg, store)
-		},
-	)
+	r.Method(http.MethodGet, "/{id}", handlers.RedirectURL(store))
+	r.Method(http.MethodPost, "/", handlers.ShortenURL(cfg, store))
+	r.Method(http.MethodPost, "/api/shorten", handlers.HandleShortenURL(cfg, store))
 
 	return r
 }
