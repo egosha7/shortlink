@@ -14,64 +14,60 @@ import (
 )
 
 func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *storage.URLStore) {
-	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	} else if r.Method == "POST" {
-		// Проверяем заголовок Content-Encoding на наличие сжатия gzip
-		if r.Header.Get("Content-Encoding") == "gzip" {
-			// Читаем тело запроса с помощью gzip.NewReader
-			gzipReader, err := gzip.NewReader(r.Body)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-			defer gzipReader.Close()
 
-			// Читаем распакованное тело запроса
-			body, err := io.ReadAll(gzipReader)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-
-			// Используем распакованное тело запроса
-			id := services.GenerateID(6)
-
-			url, ok := store.GetURL(id)
-			if !ok {
-				store.AddURL(id, string(body))
-			} else {
-				fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
-			}
-			shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
-			w.Header().Set("Content-Type", "text/plain")
-			w.WriteHeader(http.StatusCreated)
-			fmt.Fprint(w, shortURL)
-
-		} else {
-			// Читаем тело запроса без сжатия
-			body, err := io.ReadAll(r.Body)
-			if err != nil {
-				http.Error(w, "Bad Request", http.StatusBadRequest)
-				return
-			}
-
-			// Используем тело запроса
-			id := services.GenerateID(6)
-
-			url, ok := store.GetURL(id)
-			if !ok {
-				store.AddURL(id, string(body))
-			} else {
-				fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
-			}
-
-			shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
-			w.Header().Set("Content-Type", "text/plain")
-			w.WriteHeader(http.StatusCreated)
-			fmt.Fprint(w, shortURL)
+	// Проверяем заголовок Content-Encoding на наличие сжатия gzip
+	if r.Header.Get("Content-Encoding") == "gzip" {
+		// Читаем тело запроса с помощью gzip.NewReader
+		gzipReader, err := gzip.NewReader(r.Body)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
 		}
+		defer gzipReader.Close()
+
+		// Читаем распакованное тело запроса
+		body, err := io.ReadAll(gzipReader)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+
+		// Используем распакованное тело запроса
+		id := services.GenerateID(6)
+
+		url, ok := store.GetURL(id)
+		if !ok {
+			store.AddURL(id, string(body))
+		} else {
+			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
+		}
+		shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprint(w, shortURL)
+
+	} else {
+		// Читаем тело запроса без сжатия
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+
+		// Используем тело запроса
+		id := services.GenerateID(6)
+
+		url, ok := store.GetURL(id)
+		if !ok {
+			store.AddURL(id, string(body))
+		} else {
+			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
+		}
+
+		shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprint(w, shortURL)
 	}
 }
 
@@ -80,11 +76,6 @@ type ShortenURLRequest struct {
 }
 
 func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *storage.URLStore) (string, error) {
-
-	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return "", fmt.Errorf("method not allowed")
-	}
 
 	if r.Header.Get("Content-Encoding") == "gzip" {
 		// Читаем тело запроса с помощью gzip.NewReader
@@ -174,19 +165,14 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 
 func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
 
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	id := chi.URLParam(r, "id")
+	url, ok := store.GetURL(id)
+	if !ok {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
-	} else if r.Method == "GET" {
-		id := chi.URLParam(r, "id")
-		url, ok := store.GetURL(id)
-		if !ok {
-			http.Error(w, "Invalid URL", http.StatusBadRequest)
-			return
-		}
-		w.Header().Set("Location", url)
-		w.WriteHeader(http.StatusTemporaryRedirect)
 	}
+	w.Header().Set("Location", url)
+	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
 func GzipMiddleware(next http.Handler) http.Handler {

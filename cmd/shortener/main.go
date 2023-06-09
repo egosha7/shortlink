@@ -30,7 +30,7 @@ func main() {
 	r.Use(handlers.GzipMiddleware)
 	r.MethodFunc(
 		"GET", "/{id}", func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg, store)
+			handlers.RedirectURL(w, r, store)
 		},
 	)
 	r.MethodFunc(
@@ -40,7 +40,7 @@ func main() {
 	)
 	r.MethodFunc(
 		"POST", "/api/shorten", func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg, store)
+			handlers.HandleShortenURL(w, r, cfg, store)
 		},
 	)
 
