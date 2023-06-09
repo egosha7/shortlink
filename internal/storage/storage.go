@@ -79,14 +79,11 @@ func (s *URLStore) LoadFromFile() error {
 	}
 
 	if fileInfo.Size() == 0 {
-		// Если файл пуст, инициализируем пустой срез URL
-		s.urls = []URL{}
-	} else {
-		// Если файл содержит данные, декодируем их из файла в срез URL
-		err = json.NewDecoder(file).Decode(&s.urls)
-		if err != nil {
-			return err
-		}
+		return nil
+	}
+
+	if err = json.NewDecoder(file).Decode(&s.urls); err != nil {
+		return err
 	}
 
 	return nil
