@@ -38,7 +38,7 @@ func TestShortenURL(t *testing.T) {
 	// Регистрируем обработчик
 	r.HandleFunc(
 		`/`, func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg, store)
+			handlers.ShortenURL(cfg, store)
 		},
 	)
 
@@ -90,7 +90,7 @@ func TestRedirectURL(t *testing.T) {
 	// Регистрируем обработчик
 	r.Post(
 		"/", func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg, store)
+			handlers.ShortenURL(cfg, store)
 		},
 	)
 
@@ -118,7 +118,7 @@ func TestRedirectURL(t *testing.T) {
 	// Регистрируем обработчик для GET-запросов на маршруте /{id}
 	r2.Get(
 		"/{id}", func(w http.ResponseWriter, r *http.Request) {
-			handlers.RedirectURL(w, r, store)
+			handlers.RedirectURL(store)
 		},
 	)
 

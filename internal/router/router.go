@@ -16,17 +16,17 @@ func SetupRoutes(cfg *config.Config, store *storage.URLStore) http.Handler {
 	r.Use(handlers.GzipMiddleware)
 	r.MethodFunc(
 		"GET", "/{id}", func(w http.ResponseWriter, r *http.Request) {
-			handlers.RedirectURL(w, r, store)
+			handlers.RedirectURL(store)
 		},
 	)
 	r.MethodFunc(
 		"POST", "/", func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg, store)
+			handlers.ShortenURL(cfg, store)
 		},
 	)
 	r.MethodFunc(
 		"POST", "/api/shorten", func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleShortenURL(w, r, cfg, store)
+			handlers.HandleShortenURL(cfg, store)
 		},
 	)
 
