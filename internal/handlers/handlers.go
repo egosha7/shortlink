@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
@@ -11,6 +10,7 @@ import (
 	"github.com/go-chi/chi"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *storage.URLStore) {
@@ -178,33 +178,25 @@ func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore
 func GzipMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			// Проверяем заголовок Content-Encoding на наличие сжатия gzip
-			if r.Header.Get("Content-Encoding") == "gzip" {
-				// Читаем тело запроса с помощью gzip.NewReader
-				gzipReader, err := gzip.NewReader(r.Body)
-				if err != nil {
-					http.Error(w, "Bad Request", http.StatusBadRequest)
-					return
+			// Проверяем заголовок Accept-Encoding для поддержки сжатия gzip
+			encodings := r.Header.Get("Accept-Encoding")
+			if strings.Contains(encodings, "gzip") {
+				// Устанавливаем заголовок Content-Encoding для указания сжатия gzip
+				w.Header().Set("Content-Encoding", "gzip")
+
+				// Создаем новый gzipResponseWriter
+				gzipWriter := gzip.NewWriter(w)
+				defer gzipWriter.Close()
+
+				// Обновляем ResponseWriter для использования gzipResponseWriter
+				w = &gzipResponseWriter{
+					ResponseWriter: w,
+					gzipWriter:     gzipWriter,
 				}
-				defer gzipReader.Close()
-
-				// Читаем распакованное тело запроса
-				body, err := io.ReadAll(gzipReader)
-				if err != nil {
-					http.Error(w, "Bad Request", http.StatusBadRequest)
-					return
-				}
-
-				// Передаем распакованное тело запроса в следующий обработчик
-				r.Body = io.NopCloser(bytes.NewReader(body))
-
-				// Вызываем следующий обработчик в цепочке
-				next.ServeHTTP(w, r)
-
-			} else {
-				// Вызываем следующий обработчик в цепочке
-				next.ServeHTTP(w, r)
 			}
+
+			// Вызываем следующий обработчик в цепочке
+			next.ServeHTTP(w, r)
 		},
 	)
 }
