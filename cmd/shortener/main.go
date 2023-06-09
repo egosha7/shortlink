@@ -3,20 +3,23 @@ package main
 import (
 	"fmt"
 	"github.com/egosha7/shortlink/internal/config"
-	"github.com/egosha7/shortlink/internal/handlers"
 	"github.com/egosha7/shortlink/internal/loger"
+	routes "github.com/egosha7/shortlink/internal/router"
 	"github.com/egosha7/shortlink/internal/storage"
-	"github.com/go-chi/chi"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
 )
 
 func main() {
-	cfg := config.OnFlag() // Проверка конфигурации флагов и переменных окружения
+
+	// Проверка конфигурации флагов и переменных окружения
+	cfg := config.OnFlag()
 
 	// Создание хранилища
 	store := storage.NewURLStore(cfg.FilePath)
+
+	r := routes.SetupRoutes(cfg, store)
 
 	// Загрузка данных из файла
 	err := store.LoadFromFile()
@@ -24,25 +27,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error loading data from file: %v\n", err)
 		os.Exit(1)
 	}
-
-	// Создание роутера
-	r := chi.NewRouter()
-	r.Use(handlers.GzipMiddleware)
-	r.MethodFunc(
-		"GET", "/{id}", func(w http.ResponseWriter, r *http.Request) {
-			handlers.RedirectURL(w, r, store)
-		},
-	)
-	r.MethodFunc(
-		"POST", "/", func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg, store)
-		},
-	)
-	r.MethodFunc(
-		"POST", "/api/shorten", func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleShortenURL(w, r, cfg, store)
-		},
-	)
 
 	logger, err := loger.SetupLogger()
 	if err != nil {
