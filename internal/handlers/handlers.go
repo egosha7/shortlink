@@ -14,11 +14,11 @@ import (
 	"net/http"
 )
 
+type Key string
+
 func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *storage.URLStore) {
-
 	// Используем распакованное тело запроса, если оно доступно
-	if uncompressedBody := r.Context().Value("uncompressedBody"); uncompressedBody != nil {
-
+	if uncompressedBody := r.Context().Value(Key("uncompressedBody")); uncompressedBody != nil {
 		// Используем распакованное тело запроса
 		id := services.GenerateID(6)
 
@@ -62,9 +62,8 @@ type ShortenURLRequest struct {
 }
 
 func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *storage.URLStore) (string, error) {
-
 	// Используем распакованное тело запроса, если оно доступно
-	if uncompressedBody := r.Context().Value("uncompressedBody"); uncompressedBody != nil {
+	if uncompressedBody := r.Context().Value(Key("uncompressedBody")); uncompressedBody != nil {
 		body, ok := uncompressedBody.([]byte)
 		if !ok {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -148,7 +147,6 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 }
 
 func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
-
 	id := chi.URLParam(r, "id")
 	url, ok := store.GetURL(id)
 	if !ok {
@@ -182,7 +180,7 @@ func (m *GzipMiddleware) Apply(next http.Handler) http.Handler {
 				}
 
 				// Создаем новый объект *http.Request с распакованным телом
-				r = r.WithContext(context.WithValue(r.Context(), "uncompressedBody", body))
+				r = r.WithContext(context.WithValue(r.Context(), Key("uncompressedBody"), body))
 				r.Body = io.NopCloser(bytes.NewReader(body))
 			}
 
