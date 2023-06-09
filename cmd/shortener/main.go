@@ -28,25 +28,19 @@ func main() {
 	// Создание роутера
 	r := chi.NewRouter()
 	r.Use(handlers.GzipMiddleware)
-	r.HandleFunc(
-		"/{id}", func(w http.ResponseWriter, r *http.Request) {
-			handlers.RedirectURL(w, r, store)
-		},
-	)
-	r.HandleFunc(
-		`/`, func(w http.ResponseWriter, r *http.Request) {
+	r.MethodFunc(
+		"GET", "/{id}", func(w http.ResponseWriter, r *http.Request) {
 			handlers.ShortenURL(w, r, cfg, store)
 		},
 	)
-	r.HandleFunc(
-		`/api/shorten`, func(w http.ResponseWriter, r *http.Request) {
-			handlers.HandleShortenURL(w, r, cfg, store)
+	r.MethodFunc(
+		"POST", "/", func(w http.ResponseWriter, r *http.Request) {
+			handlers.ShortenURL(w, r, cfg, store)
 		},
 	)
-
-	r.NotFound(
-		func(w http.ResponseWriter, r *http.Request) {
-			handlers.RedirectURL(w, r, store)
+	r.MethodFunc(
+		"POST", "/api/shorten", func(w http.ResponseWriter, r *http.Request) {
+			handlers.ShortenURL(w, r, cfg, store)
 		},
 	)
 
