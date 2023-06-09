@@ -24,7 +24,7 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, stor
 
 		url, ok := store.GetURL(id)
 		if !ok {
-			store.AddURL(id, uncompressedBody.(string))
+			store.AddURL(id, string(uncompressedBody.([]byte)))
 		} else {
 			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
 		}
