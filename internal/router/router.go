@@ -13,7 +13,9 @@ func SetupRoutes(cfg *config.Config, store *storage.URLStore) http.Handler {
 
 	// Создание роутера
 	r := chi.NewRouter()
-	r.Use(handlers.GzipMiddleware)
+	gzipMiddleware := handlers.GzipMiddleware{}
+
+	r.Use(gzipMiddleware.Apply)
 	r.Get(
 		"/{id}", func(w http.ResponseWriter, r *http.Request) {
 			handlers.RedirectURL(w, r, store)
