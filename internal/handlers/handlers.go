@@ -64,6 +64,23 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 	var body []byte
 	var err error
 
+	// Проверяем, есть ли распакованное тело запроса в контексте
+	if uncompressedBody, ok := r.Context().Value(uncompressedBodyKey).(*gzip.Reader); ok {
+		// Если есть распакованное тело, читаем данные из него
+		body, err = io.ReadAll(uncompressedBody)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return "", fmt.Errorf("failed to decode request body: %w", err)
+		}
+	} else {
+		// Если распакованного тела нет, читаем данные из исходного тела запроса
+		body, err = io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return "", fmt.Errorf("failed to decode request body: %w", err)
+		}
+	}
+
 	// Декодируем распакованное тело запроса
 	var req ShortenURLRequest
 	err = json.Unmarshal(body, &req)
