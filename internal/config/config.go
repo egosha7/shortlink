@@ -26,22 +26,20 @@ func Default() *Config {
 	}
 }
 
+// OnFlag - функция для чтения значений из флагов командной строки и записи их в структуру Config
 func OnFlag() *Config {
 	defaultValue := Default()
+
 	// Инициализация флагов командной строки
-	addr := flag.String("a", defaultValue.Addr, "HTTP-адрес сервера")
-	baseURL := flag.String("b", defaultValue.BaseURL, "Базовый адрес результирующего сокращенного URL")
-	filePath := flag.String("f", defaultValue.FilePath, "Путь к файлу данных")
+	config := Config{}
+	flag.StringVar(&config.Addr, "a", defaultValue.Addr, "HTTP-адрес сервера")
+	flag.StringVar(&config.BaseURL, "b", defaultValue.BaseURL, "Базовый адрес результирующего сокращенного URL")
+	flag.StringVar(&config.FilePath, "f", defaultValue.FilePath, "Путь к файлу данных")
 	flag.Parse()
 
 	godotenv.Load()
 
 	// Парсинг переменных окружения в структуру Config
-	config := Config{
-		Addr:     *addr,
-		BaseURL:  *baseURL,
-		FilePath: *filePath,
-	}
 	if err := env.Parse(&config); err != nil {
 		fmt.Println("Ошибка при парсинге переменных окружения:", err)
 	}

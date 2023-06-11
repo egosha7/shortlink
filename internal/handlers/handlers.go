@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/egosha7/shortlink/internal/config"
-	"github.com/egosha7/shortlink/internal/services"
+	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/egosha7/shortlink/internal/storage"
 	"github.com/go-chi/chi"
 	"io"
@@ -14,7 +14,7 @@ import (
 type Key string
 
 func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *storage.URLStore) {
-	id := services.GenerateID(6)
+	id := helpers.GenerateID(6)
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -48,7 +48,7 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 	}
 
 	// Используем тело запроса
-	id := services.GenerateID(6)
+	id := helpers.GenerateID(6)
 
 	url, ok := store.GetURL(id)
 	if ok {
