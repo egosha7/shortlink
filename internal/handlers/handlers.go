@@ -1,81 +1,88 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/egosha7/shortlink/internal/config"
-	"github.com/egosha7/shortlink/internal/services"
+	"github.com/egosha7/shortlink/internal/helpers"
+	"github.com/egosha7/shortlink/internal/storage"
 	"github.com/go-chi/chi"
 	"io"
 	"net/http"
-	"sync"
 )
 
-type URLStore struct {
-	urls map[string]string
-	mu   sync.RWMutex
-}
+type Key string
 
-func NewURLStore() *URLStore {
-	return &URLStore{
-		urls: make(map[string]string),
-	}
-}
+func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *storage.URLStore) {
+	id := helpers.GenerateID(6)
 
-func (s *URLStore) AddURL(id, url string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.urls[id] = url
-}
-
-func (s *URLStore) GetURL(id string) (string, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	url, ok := s.urls[id]
-	return url, ok
-}
-
-func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *URLStore) {
-	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	} else if r.Method == "POST" {
-		defer r.Body.Close()
+	}
 
-		body, err := io.ReadAll(r.Body) // Заменено на io.ReadAll
-		if err != nil {
-			http.Error(w, " not allowed", http.StatusBadGateway)
-			return
-		}
-
-		id := services.GenerateID(6)
-
-		url, ok := store.GetURL(id)
-		if !ok {
-			store.AddURL(id, string(body))
-		} else {
-			fmt.Println("По этому адресу уже зарегистрирован другой адрес: ", url)
-		}
-
+	url, ok := store.GetURL(id)
+	if !ok {
 		store.AddURL(id, string(body))
-		shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusCreated)
-		fmt.Fprint(w, shortURL)
+	} else {
+		fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
 	}
+	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusCreated)
+	fmt.Fprint(w, shortURL)
 }
 
-func RedirectURL(w http.ResponseWriter, r *http.Request, store *URLStore) {
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	} else if r.Method == "GET" {
-		id := chi.URLParam(r, "id")
-		url, ok := store.GetURL(id)
-		if !ok {
-			http.Error(w, "Invalid URL", http.StatusBadRequest)
-			return
-		}
-		w.Header().Set("Location", url)
-		w.WriteHeader(http.StatusTemporaryRedirect)
+type ShortenURLRequest struct {
+	URL string `json:"url"`
+}
+
+func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *storage.URLStore) (string, error) {
+
+	var req ShortenURLRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return "", fmt.Errorf("failed to decode request body: %w", err)
 	}
+
+	// Используем тело запроса
+	id := helpers.GenerateID(6)
+
+	url, ok := store.GetURL(id)
+	if ok {
+		fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
+	} else {
+		store.AddURL(id, req.URL)
+	}
+
+	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	response := struct {
+		Result string `json:"result"`
+	}{
+		Result: shortURL,
+	}
+
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return "", fmt.Errorf("failed to encode response: %w", err)
+	}
+
+	return shortURL, nil
+}
+
+func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
+	id := chi.URLParam(r, "id")
+	url, ok := store.GetURL(id)
+	if !ok {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Location", url)
+	w.WriteHeader(http.StatusTemporaryRedirect)
 }

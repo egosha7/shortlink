@@ -3,6 +3,7 @@ package handlers_test
 import (
 	"bytes"
 	"github.com/egosha7/shortlink/internal/config"
+	"github.com/egosha7/shortlink/internal/storage"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,11 +15,12 @@ import (
 
 func TestShortenURL(t *testing.T) {
 	cfg := &config.Config{
-		Addr:    "localhost:8080",
-		BaseURL: "http://localhost:8080",
+		Addr:     "localhost:8080",
+		BaseURL:  "http://localhost:8080",
+		FilePath: "tmp\\some3.json",
 	}
 	// Указываем экземпляр URLStore
-	store := handlers.NewURLStore()
+	store := storage.NewURLStore(cfg.FilePath)
 
 	// Создаем тестовый запрос
 	body := []byte("http://example.com")
@@ -40,7 +42,7 @@ func TestShortenURL(t *testing.T) {
 		},
 	)
 
-	// Вызываем функцию-обработчик
+	// Вызываем функцию-обработчи
 	r.ServeHTTP(rr, req)
 
 	// Проверяем код ответа
@@ -63,12 +65,13 @@ func TestShortenURL(t *testing.T) {
 
 func TestRedirectURL(t *testing.T) {
 	cfg := &config.Config{
-		Addr:    "localhost:8080",
-		BaseURL: "http://localhost:8080",
+		Addr:     "localhost:8080",
+		BaseURL:  "http://localhost:8080",
+		FilePath: "tmp\\some3.json",
 	}
 
 	// Указываем экземпляр URLStore
-	store := handlers.NewURLStore()
+	store := storage.NewURLStore(cfg.FilePath)
 
 	link := "http://example.com"
 	formData := strings.NewReader(link)
