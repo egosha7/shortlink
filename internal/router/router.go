@@ -1,16 +1,18 @@
 package routes
 
 import (
+	"context"
 	"github.com/egosha7/shortlink/internal/compress"
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/handlers"
 	"github.com/egosha7/shortlink/internal/storage"
+	"github.com/jackc/pgx/v4"
 	"net/http"
 
 	"github.com/go-chi/chi"
 )
 
-func SetupRoutes(cfg *config.Config, store *storage.URLStore) http.Handler {
+func SetupRoutes(cfg *config.Config, store *storage.URLStore, conn *pgx.Conn) http.Handler {
 
 	// Создание роутера
 	r := chi.NewRouter()
@@ -22,6 +24,18 @@ func SetupRoutes(cfg *config.Config, store *storage.URLStore) http.Handler {
 			route.Get(
 				"/{id}", func(w http.ResponseWriter, r *http.Request) {
 					handlers.RedirectURL(w, r, store)
+				},
+			)
+
+			route.Get(
+				"/ping", func(w http.ResponseWriter, r *http.Request) {
+					err := conn.Ping(context.Background())
+					if err != nil {
+						http.Error(w, "Database connection error", http.StatusInternalServerError)
+						return
+					}
+
+					w.WriteHeader(http.StatusOK)
 				},
 			)
 
