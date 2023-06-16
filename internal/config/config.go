@@ -15,7 +15,6 @@ type Config struct {
 	Addr     string `env:"SERVER_ADDRESS"`    // Адрес сервера
 	BaseURL  string `env:"BASE_URL"`          // Базовый адрес результирующего сокращенного URL
 	FilePath string `env:"FILE_STORAGE_PATH"` // Путь к файлу для сохранения данных
-	DataBase string `env:"DATABASE_DSN"`      // Адрес базы данных
 }
 
 // Default - функция для создания новой конфигурации с значениями по умолчанию
@@ -24,7 +23,6 @@ func Default() *Config {
 		Addr:     "localhost:8080",
 		BaseURL:  "http://localhost:8080",
 		FilePath: "",
-		DataBase: "postgres://postgres:egosha@localhost:5432/shortlink",
 	}
 }
 
@@ -37,7 +35,6 @@ func OnFlag() *Config {
 	flag.StringVar(&config.Addr, "a", defaultValue.Addr, "HTTP-адрес сервера")
 	flag.StringVar(&config.BaseURL, "b", defaultValue.BaseURL, "Базовый адрес результирующего сокращенного URL")
 	flag.StringVar(&config.FilePath, "f", defaultValue.FilePath, "Путь к файлу данных")
-	flag.StringVar(&config.DataBase, "d", defaultValue.DataBase, "Адрес базы данных")
 	flag.Parse()
 
 	godotenv.Load()
