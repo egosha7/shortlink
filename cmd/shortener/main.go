@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/egosha7/shortlink/internal/config"
+	"github.com/egosha7/shortlink/internal/db"
 	"github.com/egosha7/shortlink/internal/loger"
 	routes "github.com/egosha7/shortlink/internal/router"
 	"github.com/egosha7/shortlink/internal/storage"
-	"github.com/jackc/pgx/v4"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
@@ -35,7 +35,7 @@ func main() {
 	}
 	defer logger.Sync()
 
-	conn, err := connectToDB(cfg)
+	conn, err := db.ConnectToDB(cfg)
 	if err != nil {
 		logger.Error("Error connecting to database", zap.Error(err))
 		os.Exit(1)
@@ -50,24 +50,4 @@ func main() {
 		logger.Error("Error starting server", zap.Error(err))
 		os.Exit(1)
 	}
-}
-
-func connectToDB(cfg *config.Config) (*pgx.Conn, error) {
-
-	if cfg.DataBase == "" {
-		// Возвращаем nil, если строка подключения пуст
-		return nil, nil
-	}
-
-	connConfig, err := pgx.ParseConfig(cfg.DataBase)
-	if err != nil {
-		return nil, err
-	}
-
-	conn, err := pgx.ConnectConfig(context.Background(), connConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return conn, nil
 }

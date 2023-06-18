@@ -18,40 +18,79 @@ func SetupRoutes(cfg *config.Config, store *storage.URLStore, conn *pgx.Conn) ht
 	r := chi.NewRouter()
 	gzipMiddleware := compress.GzipMiddleware{}
 
-	r.Group(
-		func(route chi.Router) {
-			route.Use(gzipMiddleware.Apply)
-			route.Get(
-				"/{id}", func(w http.ResponseWriter, r *http.Request) {
-					handlers.RedirectURL(w, r, store)
-				},
-			)
+	if conn != nil {
+		r.Group(
+			// Группа хэндлеров для работы с БД
+			func(route chi.Router) {
+				route.Use(gzipMiddleware.Apply)
+				route.Get(
+					"/{id}", func(w http.ResponseWriter, r *http.Request) {
+						handlers.RedirectURLuseDB(w, r, conn)
+					},
+				)
 
-			route.Get(
-				"/ping", func(w http.ResponseWriter, r *http.Request) {
-					err := conn.Ping(context.Background())
-					if err != nil {
-						http.Error(w, "Database connection error", http.StatusInternalServerError)
-						return
-					}
+				route.Get(
+					"/ping", func(w http.ResponseWriter, r *http.Request) {
+						err := conn.Ping(context.Background())
+						if err != nil {
+							http.Error(w, "Database connection error", http.StatusInternalServerError)
+							return
+						}
 
-					w.WriteHeader(http.StatusOK)
-				},
-			)
+						w.WriteHeader(http.StatusOK)
+					},
+				)
 
-			route.Post(
-				"/", func(w http.ResponseWriter, r *http.Request) {
-					handlers.ShortenURL(w, r, cfg, store)
-				},
-			)
+				route.Post(
+					"/", func(w http.ResponseWriter, r *http.Request) {
+						handlers.ShortenURLuseDB(w, r, cfg, conn)
+					},
+				)
 
-			route.Post(
-				"/api/shorten", func(w http.ResponseWriter, r *http.Request) {
-					handlers.HandleShortenURL(w, r, cfg, store)
-				},
-			)
-		},
-	)
+				route.Post(
+					"/api/shorten", func(w http.ResponseWriter, r *http.Request) {
+						handlers.HandleShortenURLuseDB(w, r, cfg, conn)
+					},
+				)
+			},
+		)
+	} else {
+		r.Group(
+			// Группа хэндлеров для работы с паматью и файлом
+			func(route chi.Router) {
+				route.Use(gzipMiddleware.Apply)
+				route.Get(
+					"/{id}", func(w http.ResponseWriter, r *http.Request) {
+						handlers.RedirectURL(w, r, store)
+					},
+				)
+
+				route.Get(
+					"/ping", func(w http.ResponseWriter, r *http.Request) {
+						err := conn.Ping(context.Background())
+						if err != nil {
+							http.Error(w, "Database connection error", http.StatusInternalServerError)
+							return
+						}
+
+						w.WriteHeader(http.StatusOK)
+					},
+				)
+
+				route.Post(
+					"/", func(w http.ResponseWriter, r *http.Request) {
+						handlers.ShortenURL(w, r, cfg, store)
+					},
+				)
+
+				route.Post(
+					"/api/shorten", func(w http.ResponseWriter, r *http.Request) {
+						handlers.HandleShortenURL(w, r, cfg, store)
+					},
+				)
+			},
+		)
+	}
 
 	return r
 }
