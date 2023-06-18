@@ -1,5 +1,22 @@
-POST http://localhost:8080/
-Content-Type: text/plain
+POST http://localhost:8080/api/shorten/batch
+Content-Type: application/json
 
-https://example.com
+[
+  {
+    "correlation_id": "111111",
+    "original_url": "https://practicum.1.ru"
+  },
+  {
+    "correlation_id": "222222",
+    "original_url": "https://practicum.2.ru"
+  },
+  {
+    "correlation_id": "333333",
+    "original_url": "https://practicum.3.ru"
+  },
+  {
+    "correlation_id": "444444",
+    "original_url": "https://practicum.4.ru"
+  }
+]
 

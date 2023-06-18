@@ -86,3 +86,49 @@ func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore
 	w.Header().Set("Location", url)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
+
+func HandleShortenBatch(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *storage.URLStore) {
+	var records []map[string]string
+	err := json.NewDecoder(r.Body).Decode(&records)
+	if err != nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	// Проверяем, что есть записи для обработки
+	if len(records) == 0 {
+		http.Error(w, "Empty batch", http.StatusBadRequest)
+		return
+	}
+
+	// Создаем слайс для хранения результата
+	res := make([]map[string]string, 0, len(records))
+
+	// Обрабатываем каждую запись
+	for _, record := range records {
+		correlationID := record["correlation_id"]
+		originalURL := record["original_url"]
+
+		url, ok := store.GetURL(correlationID)
+		if ok {
+			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
+		} else {
+			store.AddURL(correlationID, originalURL)
+		}
+
+		shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, correlationID)
+
+		// Добавляем результат в ответ
+		res = append(
+			res, map[string]string{
+				"correlation_id": correlationID,
+				"short_url":      shortURL,
+			},
+		)
+	}
+
+	// Отправляем ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(res)
+}

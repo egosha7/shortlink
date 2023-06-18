@@ -114,3 +114,65 @@ func RedirectURLuseDB(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	w.Header().Set("Location", url)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
+
+func HandleShortenBatchUseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config, conn *pgx.Conn) {
+	var records []map[string]string
+	err := json.NewDecoder(r.Body).Decode(&records)
+	if err != nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	// Проверяем, что есть записи для обработки
+	if len(records) == 0 {
+		http.Error(w, "Empty batch", http.StatusBadRequest)
+		return
+	}
+
+	// Создаем слайс для хранения результата
+	res := make([]map[string]string, 0, len(records))
+
+	// Начинаем транзакцию
+	tx, err := conn.Begin(context.Background())
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Выполняем вставку каждой записи
+	for _, record := range records {
+		correlationID := record["correlation_id"]
+		originalURL := record["original_url"]
+		shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, correlationID)
+
+		_, err := tx.Exec(
+			context.Background(), "INSERT INTO urls (id, URL) VALUES ($1, $2)", correlationID, originalURL,
+		)
+		if err != nil {
+			// Ошибка вставки, откатываем транзакцию
+			tx.Rollback(context.Background())
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		// Добавляем результат в ответ
+		res = append(
+			res, map[string]string{
+				"correlation_id": correlationID,
+				"short_url":      shortURL,
+			},
+		)
+	}
+
+	// Завершаем транзакцию
+	err = tx.Commit(context.Background())
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Отправляем ответ
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(res)
+}

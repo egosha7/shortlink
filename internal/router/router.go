@@ -52,6 +52,12 @@ func SetupRoutes(cfg *config.Config, store *storage.URLStore, conn *pgx.Conn) ht
 						handlers.HandleShortenURLuseDB(w, r, cfg, conn)
 					},
 				)
+
+				route.Post(
+					"/api/shorten/batch", func(w http.ResponseWriter, r *http.Request) {
+						handlers.HandleShortenBatchUseDB(w, r, cfg, conn)
+					},
+				)
 			},
 		)
 	} else {
@@ -88,6 +94,13 @@ func SetupRoutes(cfg *config.Config, store *storage.URLStore, conn *pgx.Conn) ht
 						handlers.HandleShortenURL(w, r, cfg, store)
 					},
 				)
+
+				route.Post(
+					"/api/shorten/batch", func(w http.ResponseWriter, r *http.Request) {
+						handlers.HandleShortenBatch(w, r, cfg, store)
+					},
+				)
+
 			},
 		)
 	}
