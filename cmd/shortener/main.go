@@ -55,7 +55,7 @@ func main() {
 func connectToDB(cfg *config.Config) (*pgx.Conn, error) {
 
 	if cfg.DataBase == "" {
-		// Возвращаем nil, если строка подключения пуста
+		// Возвращаем nil, если строка подключения пуст
 		return nil, nil
 	}
 
