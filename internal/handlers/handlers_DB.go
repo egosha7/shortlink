@@ -7,6 +7,8 @@ import (
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/go-chi/chi"
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
 	"io"
 	"net/http"
@@ -21,23 +23,23 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 		return
 	}
 
-	// Проверка наличия URL в базе данных
-	var count int
-	err = conn.QueryRow(context.Background(), "SELECT COUNT(*) FROM urls WHERE id = $1", id).Scan(&count)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if count > 0 {
-		fmt.Println("По этому адресу уже зарегистрирован другой адрес")
-		http.Error(w, "Conflict", http.StatusConflict)
-		return
-	}
-
 	// Сохранение URL в базе данных
 	_, err = conn.Exec(context.Background(), "INSERT INTO urls (id, url) VALUES ($1, $2)", id, string(body))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
+			// Проверка наличия URL в базе данных
+			var url string
+			err = conn.QueryRow(context.Background(), "SELECT url FROM urls WHERE id = $1", id).Scan(&url)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
+			http.Error(w, url, http.StatusConflict)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -56,25 +58,39 @@ func HandleShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.C
 		return "", fmt.Errorf("failed to decode request body: %w", err)
 	}
 
-	id := helpers.GenerateID(6)
-
-	// Проверка наличия URL в базе данных
-	var count int
-	err = conn.QueryRow(context.Background(), "SELECT COUNT(*) FROM urls WHERE id = $1", id).Scan(&count)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return "", fmt.Errorf("failed to check URL existence: %w", err)
-	}
-	if count > 0 {
-		fmt.Println("По этому адресу уже зарегистрирован другой адрес")
-		http.Error(w, "Conflict", http.StatusConflict)
-		return "", fmt.Errorf("URL already exists")
-	}
+	id := helpers.GenerateID(3)
 
 	// Сохранение URL в базе данных
 	_, err = conn.Exec(context.Background(), "INSERT INTO urls (id, url) VALUES ($1, $2)", id, req.URL)
 	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
+			// Проверка наличия URL в базе данных
+			var url string
+			err = conn.QueryRow(context.Background(), "SELECT url FROM urls WHERE id = $1", id).Scan(&url)
+			if err != nil {
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return "", fmt.Errorf("failed to save URL to database: %w", err)
+			}
+
+			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
+
+			response := struct {
+				Result string `json:"result"`
+			}{
+				Result: url,
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+
+			err = json.NewEncoder(w).Encode(response)
+			if err != nil {
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return "", fmt.Errorf("failed to encode response: %w", err)
+			}
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return "", fmt.Errorf("failed to save URL to database: %w", err)
 	}
 

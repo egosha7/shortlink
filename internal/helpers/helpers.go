@@ -6,7 +6,7 @@ import (
 
 func GenerateID(n int) string {
 	// генерация случайного идентификатора
-	runestring := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	runestring := "34" // abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
 	var letterRunes = []rune(runestring)
 	b := make([]rune, n)
 	for i := range b {
