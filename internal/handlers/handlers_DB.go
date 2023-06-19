@@ -24,12 +24,12 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 	}
 
 	// Сохранение URL в базе данных
-	_, err = conn.Exec(context.Background(), "INSERT INTO urls (id, url) VALUES ($1, $2)", id, string(body))
+	_, err = conn.Exec(context.Background(), "INSERT INTO urls (SHORTURL, url) VALUES ($1, $2)", id, string(body))
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
 			// Проверка наличия URL в базе данных
 			var url string
-			err = conn.QueryRow(context.Background(), "SELECT url FROM urls WHERE id = $1", id).Scan(&url)
+			err = conn.QueryRow(context.Background(), "SELECT id FROM urls WHERE SHORTURL = $1", id).Scan(&url)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -61,12 +61,12 @@ func HandleShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.C
 	id := helpers.GenerateID(6)
 
 	// Сохранение URL в базе данных
-	_, err = conn.Exec(context.Background(), "INSERT INTO urls (id, url) VALUES ($1, $2)", id, req.URL)
+	_, err = conn.Exec(context.Background(), "INSERT INTO urls (SHORTURL, url) VALUES ($1, $2)", id, req.URL)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
 			// Проверка наличия URL в базе данных
 			var url string
-			err = conn.QueryRow(context.Background(), "SELECT url FROM urls WHERE id = $1", id).Scan(&url)
+			err = conn.QueryRow(context.Background(), "SELECT id FROM urls WHERE SHORTURL = $1", id).Scan(&url)
 			if err != nil {
 				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 				return "", fmt.Errorf("failed to save URL to database: %w", err)
@@ -117,7 +117,7 @@ func RedirectURLuseDB(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	id := chi.URLParam(r, "id")
 
 	var url string
-	err := conn.QueryRow(context.Background(), "SELECT url FROM urls WHERE id = $1", id).Scan(&url)
+	err := conn.QueryRow(context.Background(), "SELECT url FROM urls WHERE SHORTURL = $1", id).Scan(&url)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			http.Error(w, "Invalid URL", http.StatusBadRequest)
@@ -162,7 +162,7 @@ func HandleShortenBatchUseDB(w http.ResponseWriter, r *http.Request, cfg *config
 		shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, correlationID)
 
 		_, err := tx.Exec(
-			context.Background(), "INSERT INTO urls (id, URL) VALUES ($1, $2)", correlationID, originalURL,
+			context.Background(), "INSERT INTO urls (SHORTURL, URL) VALUES ($1, $2)", correlationID, originalURL,
 		)
 		if err != nil {
 			// Ошибка вставки, откатываем транзакцию
