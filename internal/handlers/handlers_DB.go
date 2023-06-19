@@ -8,7 +8,6 @@ import (
 	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/go-chi/chi"
 	"github.com/jackc/pgconn"
-	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
 	"io"
 	"net/http"
@@ -26,7 +25,7 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 	// Сохранение URL в базе данных
 	_, err = conn.Exec(context.Background(), "INSERT INTO urls (id, url) VALUES ($1, $2)", id, string(body))
 	if err != nil {
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			// Проверка наличия URL в базе данных
 			var url string
 			err = conn.QueryRow(context.Background(), "SELECT url FROM urls WHERE url = $1", string(body)).Scan(&url)
