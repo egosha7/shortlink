@@ -28,7 +28,7 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			// Проверка наличия URL в базе данных
 			var url string
-			err = conn.QueryRow(context.Background(), "SELECT id FROM urls WHERE url = '$1'", string(body)).Scan(&url)
+			err = conn.QueryRow(context.Background(), "SELECT id FROM urls WHERE url = $1", string(body)).Scan(&url)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				fmt.Println(err)
