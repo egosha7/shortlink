@@ -31,7 +31,7 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 			err = conn.QueryRow(context.Background(), "SELECT id FROM urls WHERE url = $1", string(body)).Scan(&url)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
-				fmt.Println(err)
+				fmt.Println(body)
 				return
 			}
 			shortURLout := fmt.Sprintf("%s/%s", cfg.BaseURL, url)
