@@ -58,7 +58,7 @@ func HandleShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.C
 		return "", fmt.Errorf("failed to decode request body: %w", err)
 	}
 
-	id := helpers.GenerateID(3)
+	id := helpers.GenerateID(6)
 
 	// Сохранение URL в базе данных
 	_, err = conn.Exec(context.Background(), "INSERT INTO urls (id, url) VALUES ($1, $2)", id, req.URL)
