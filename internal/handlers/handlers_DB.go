@@ -30,7 +30,7 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 			var url string
 			err = conn.QueryRow(context.Background(), "SELECT id FROM urls WHERE url = $1", string(body)).Scan(&url)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(w, err.Error(), http.StatusCreated)
 				fmt.Println(err)
 				return
 			}
