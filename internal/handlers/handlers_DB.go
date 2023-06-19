@@ -18,7 +18,7 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, err.Error(), 888)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -28,16 +28,16 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			// Проверка наличия URL в базе данных
 			var url string
-			err = conn.QueryRow(context.Background(), "SELECT url FROM urls WHERE url = $1", string(body)).Scan(&url)
+			err = conn.QueryRow(context.Background(), "SELECT url FROM urls WHERE url = $1", body).Scan(&url)
 			if err != nil {
-				http.Error(w, err.Error(), 889)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
 			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
 			http.Error(w, url, http.StatusConflict)
 		} else {
-			http.Error(w, err.Error(), 890)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		return
 	}
