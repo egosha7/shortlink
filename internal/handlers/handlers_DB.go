@@ -34,6 +34,7 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 				fmt.Println(string(body))
 				return
 			}
+
 			shortURLout := fmt.Sprintf("%s/%s", cfg.BaseURL, url)
 			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
 			http.Error(w, shortURLout, http.StatusConflict)
