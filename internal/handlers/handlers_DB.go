@@ -7,9 +7,8 @@ import (
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/go-chi/chi"
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
+	"github.com/lib/pq"
 	"io"
 	"net/http"
 )
@@ -23,31 +22,25 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 		return
 	}
 
-	// Сохранение URL в базе данных
-	_, err = conn.Exec(
-		context.Background(), "INSERT INTO urls (id, url) VALUES ($1, $2) ON CONFLICT (url) DO NOTHING", id,
-		string(body),
-	)
-	if err != nil {
-		// Проверяем ошибку, чтобы определить, была ли нарушена уникальность URL
-		pgErr, ok := err.(*pgconn.PgError)
-		if ok && pgErr.Code == pgerrcode.UniqueViolation {
-			// Проверка наличия URL в базе данных
-			var url string
-			err = conn.QueryRow(context.Background(), "SELECT id FROM urls WHERE url = $1", string(body)).Scan(&url)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				fmt.Println(string(body))
-				return
-			}
+	stmt := `INSERT INTO urls (id, url) VALUES ($1, $2) ON CONFLICT (url) DO NOTHING RETURNING id`
+	row := conn.QueryRow(context.Background(), stmt, id, string(body))
 
-			shortURLout := fmt.Sprintf("%s/%s", cfg.BaseURL, url)
-			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
-			http.Error(w, shortURLout, http.StatusConflict)
-		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+	var existingID string
+	err = row.Scan(&existingID)
+	if err != nil {
+		if existingID == "" {
+			err = conn.QueryRow(
+				context.Background(), "SELECT id FROM urls WHERE url = $1", string(body),
+			).Scan(&existingID)
+			if err == nil {
+				shortURLout := fmt.Sprintf("%s/%s", cfg.BaseURL, existingID)
+				fmt.Println("По этому адресу уже зарегистрирован другой адрес:")
+				http.Error(w, shortURLout, http.StatusConflict)
+			} else {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			return
 		}
-		return
 	}
 
 	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
@@ -73,8 +66,8 @@ func HandleShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.C
 	)
 	if err != nil {
 		// Проверяем ошибку, чтобы определить, была ли нарушена уникальность URL
-		pgErr, ok := err.(*pgconn.PgError)
-		if ok && pgErr.Code == pgerrcode.UniqueViolation {
+		pqErr, ok := err.(*pq.Error)
+		if ok && pqErr.Code == "23505" {
 			// Проверка наличия URL в базе данных
 			var url string
 			err = conn.QueryRow(context.Background(), "SELECT url FROM urls WHERE url = $1", req.URL).Scan(&url)
