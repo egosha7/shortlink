@@ -34,7 +34,7 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 		w.WriteHeader(http.StatusConflict)
 		w.Write([]byte(shortURLout))
 		return
-	} else if existingID != "" && switchBool == false {
+	} else if existingID != "" && switchBool == true {
 		id = existingID
 	}
 	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
