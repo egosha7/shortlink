@@ -67,6 +67,10 @@ func HandleShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.C
 	id := helpers.GenerateID(6)
 	fmt.Println("Отправлена ссылка:", req.URL)
 	err = db.PrintAllURLs(conn)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating table: %v\n", err)
+		os.Exit(1)
+	}
 	// Сохранение URL в базе данных
 	stmt := `INSERT INTO urls (id, url) VALUES ($1, $2) ON CONFLICT (url) DO NOTHING RETURNING id`
 	row := conn.QueryRow(context.Background(), stmt, id, req.URL)
