@@ -45,7 +45,7 @@ func CreateTable(conn *pgx.Conn) error {
 	_, err := conn.Exec(
 		context.Background(), `
 		CREATE TABLE IF NOT EXISTS urls (
-			ID TEXT PRIMARY KEY,
+			ID TEXT,
 			URL TEXT,
 			UNIQUE (URL)
 		)
