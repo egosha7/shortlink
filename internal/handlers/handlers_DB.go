@@ -26,7 +26,7 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 	var existingID string
 	var switchBool bool
 	existingID, switchBool = repo.AddURL(id, string(body))
-	if existingID != "" && switchBool == false {
+	if existingID != "" && !switchBool {
 		existingID = strings.TrimRight(existingID, "\n")
 		shortURLout := fmt.Sprintf("%s/%s", cfg.BaseURL, existingID)
 		fmt.Println("По этому адресу уже зарегистрирован другой адрес:")
@@ -34,7 +34,7 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 		w.WriteHeader(http.StatusConflict)
 		w.Write([]byte(shortURLout))
 		return
-	} else if existingID != "" && switchBool == true {
+	} else if existingID != "" && switchBool {
 		id = existingID
 	}
 	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
@@ -57,7 +57,7 @@ func HandleShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.C
 	var existingID string
 	var switchBool bool
 	existingID, switchBool = repo.AddURL(id, req.URL)
-	if existingID != "" && switchBool == false {
+	if existingID != "" && !switchBool {
 		fmt.Println("По этому адресу уже зарегистрирован другой адрес:", existingID)
 
 		response := struct {
@@ -75,7 +75,7 @@ func HandleShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.C
 			return "", fmt.Errorf("failed to encode response: %w", err)
 		}
 		return "", fmt.Errorf("failed to save URL to database")
-	} else if existingID != "" && switchBool == false {
+	} else if existingID != "" && switchBool {
 		id = existingID
 	}
 
