@@ -2,7 +2,6 @@ package routes
 
 import (
 	"context"
-	"fmt"
 	"github.com/egosha7/shortlink/internal/compress"
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/handlers"
@@ -14,7 +13,6 @@ import (
 )
 
 func SetupRoutes(cfg *config.Config, store *storage.URLStore, conn *pgx.Conn) http.Handler {
-	PrintAllURLs(conn)
 	// Создание роутера
 	r := chi.NewRouter()
 	gzipMiddleware := compress.GzipMiddleware{}
@@ -107,27 +105,4 @@ func SetupRoutes(cfg *config.Config, store *storage.URLStore, conn *pgx.Conn) ht
 	}
 
 	return r
-}
-
-func PrintAllURLs(conn *pgx.Conn) error {
-	rows, err := conn.Query(context.Background(), "SELECT * FROM urls")
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var id, url string
-		err := rows.Scan(&id, &url)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("ID: %s, URL: %s\n", id, url)
-	}
-
-	if err := rows.Err(); err != nil {
-		return err
-	}
-
-	return nil
 }
