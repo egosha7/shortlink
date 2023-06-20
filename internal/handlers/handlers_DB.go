@@ -22,6 +22,7 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	fmt.Println("Отправлена ссылка:", string(body))
 	err = db.PrintAllURLs(conn)
 	if err != nil {
@@ -40,7 +41,7 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 			).Scan(&existingID)
 			if err == nil {
 				shortURLout := fmt.Sprintf("%s/%s", cfg.BaseURL, existingID)
-				fmt.Println("По этому адресу уже зарегистрирован другой адрес:")
+				fmt.Println("По этому адресу уже зарегистрирован другой адрес:", existingID)
 				http.Error(w, shortURLout, http.StatusConflict)
 			} else {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
