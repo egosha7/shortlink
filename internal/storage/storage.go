@@ -135,7 +135,7 @@ func (r *PostgresURLRepository) AddURL(id string, url string) (string, bool) {
 	_, err := r.db.Exec(context.Background(), query, id, url)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
-			if pgErr.ConstraintName == "urls_id_key" {
+			if pgErr.ConstraintName == "urls_pkey" {
 				// ID уже существует в базе данных, генерируем новый
 				newID := helpers.GenerateID(6)
 				return r.AddURL(newID, url)
