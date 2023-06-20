@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi"
 	"io"
 	"net/http"
+	"strings"
 )
 
 type Key string
@@ -22,12 +23,21 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, stor
 		return
 	}
 
-	url, ok := store.GetURL(id)
-	if !ok {
-		store.AddURL(id, string(body))
-	} else {
-		fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
+	var existingID string
+	var switchBool bool
+	existingID, switchBool = store.AddURL(id, string(body))
+	if existingID != "" && !switchBool {
+		existingID = strings.TrimRight(existingID, "\n")
+		shortURLout := fmt.Sprintf("%s/%s", cfg.BaseURL, existingID)
+		fmt.Println("По этому адресу уже зарегистрирован другой адрес:")
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusConflict)
+		w.Write([]byte(shortURLout))
+		return
+	} else if existingID != "" && switchBool {
+		id = existingID
 	}
+
 	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
@@ -50,11 +60,29 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 	// Используем тело запроса
 	id := helpers.GenerateID(6)
 
-	url, ok := store.GetURL(id)
-	if ok {
-		fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
-	} else {
-		store.AddURL(id, req.URL)
+	var existingID string
+	var switchBool bool
+	existingID, switchBool = store.AddURL(id, req.URL)
+	if existingID != "" && !switchBool {
+		fmt.Println("По этому адресу уже зарегистрирован другой адрес:", existingID)
+
+		response := struct {
+			Result string `json:"result"`
+		}{
+			Result: existingID,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+
+		err = json.NewEncoder(w).Encode(response)
+		if err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return "", fmt.Errorf("failed to encode response: %w", err)
+		}
+		return "", fmt.Errorf("failed to save URL to database")
+	} else if existingID != "" && switchBool {
+		id = existingID
 	}
 
 	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)

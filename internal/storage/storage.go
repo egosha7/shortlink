@@ -29,9 +29,27 @@ func NewURLStore(filePath string) *URLStore {
 	}
 }
 
-func (s *URLStore) AddURL(id, url string) {
+func (s *URLStore) AddURL(id, url string) (string, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Проверка наличия дубликата ID
+	for _, u := range s.urls {
+		if u.ID == id {
+			// ID уже существует в хранилище, генерируем новый
+			newID := helpers.GenerateID(6)
+			return s.AddURL(newID, url)
+		}
+	}
+
+	// Проверка наличия дубликата URL
+	for _, u := range s.urls {
+		if u.URL == url {
+			// URL уже существует в хранилище, возвращаем соответствующий ID
+			return u.ID, false
+		}
+	}
+
 	newURL := URL{ID: id, URL: url}
 	s.urls = append(s.urls, newURL)
 
@@ -40,6 +58,8 @@ func (s *URLStore) AddURL(id, url string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error saving data to file: %v\n", err)
 	}
+
+	return id, true
 }
 
 func (s *URLStore) GetURL(id string) (string, bool) {
