@@ -15,6 +15,7 @@ import (
 func SetupRoutes(cfg *config.Config, store *storage.URLStore, conn *pgx.Conn) http.Handler {
 	// Создание роутера
 	r := chi.NewRouter()
+	urlRepository := storage.NewPostgresURLRepository(conn)
 	gzipMiddleware := compress.GzipMiddleware{}
 
 	if conn != nil {
@@ -24,7 +25,7 @@ func SetupRoutes(cfg *config.Config, store *storage.URLStore, conn *pgx.Conn) ht
 				route.Use(gzipMiddleware.Apply)
 				route.Get(
 					"/{id}", func(w http.ResponseWriter, r *http.Request) {
-						handlers.RedirectURLuseDB(w, r, conn)
+						handlers.RedirectURLuseDB(w, r, urlRepository)
 					},
 				)
 
@@ -42,19 +43,19 @@ func SetupRoutes(cfg *config.Config, store *storage.URLStore, conn *pgx.Conn) ht
 
 				route.Post(
 					"/", func(w http.ResponseWriter, r *http.Request) {
-						handlers.ShortenURLuseDB(w, r, cfg, conn)
+						handlers.ShortenURLuseDB(w, r, cfg, urlRepository)
 					},
 				)
 
 				route.Post(
 					"/api/shorten", func(w http.ResponseWriter, r *http.Request) {
-						handlers.HandleShortenURLuseDB(w, r, cfg, conn)
+						handlers.HandleShortenURLuseDB(w, r, cfg, urlRepository)
 					},
 				)
 
 				route.Post(
 					"/api/shorten/batch", func(w http.ResponseWriter, r *http.Request) {
-						handlers.HandleShortenBatchUseDB(w, r, cfg, conn)
+						handlers.HandleShortenBatchUseDB(w, r, cfg, urlRepository)
 					},
 				)
 			},

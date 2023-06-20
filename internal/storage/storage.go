@@ -1,8 +1,10 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jackc/pgx/v4"
 	"os"
 	"sync"
 )
@@ -107,4 +109,82 @@ func (s *URLStore) SaveToFile() error {
 	}
 
 	return nil
+}
+
+type URLRepository interface {
+	AddURL(id string, url string) bool
+	GetIDByURL(url string) (string, bool)
+	GetURLByID(id string) (string, bool)
+	PrintAllURLs()
+}
+
+type PostgresURLRepository struct {
+	db *pgx.Conn
+}
+
+func NewPostgresURLRepository(db *pgx.Conn) *PostgresURLRepository {
+	return &PostgresURLRepository{
+		db: db,
+	}
+}
+
+func (r *PostgresURLRepository) AddURL(id string, url string) bool {
+	query := "INSERT INTO urls (id, url) VALUES ($1, $2)"
+	_, err := r.db.Exec(context.Background(), query, id, url)
+	if err != nil {
+		fmt.Println("Failed to add URL:", err)
+		return false
+	}
+	return true
+}
+
+func (r *PostgresURLRepository) GetIDByURL(url string) (string, bool) {
+	var id string
+	query := "SELECT id FROM urls WHERE url = $1"
+	err := r.db.QueryRow(context.Background(), query, url).Scan(&id)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", false
+		}
+		fmt.Println("Failed to get ID by URL:", err)
+		return "", false
+	}
+	return id, true
+}
+
+func (r *PostgresURLRepository) GetURLByID(id string) (string, bool) {
+	var url string
+	query := "SELECT url FROM urls WHERE id = $1"
+	err := r.db.QueryRow(context.Background(), query, id).Scan(&url)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", false
+		}
+		fmt.Println("Failed to get URL by ID:", err)
+		return "", false
+	}
+	return url, true
+}
+
+func (r *PostgresURLRepository) PrintAllURLs() {
+	rows, err := r.db.Query(context.Background(), "SELECT id, url FROM urls")
+	if err != nil {
+		fmt.Println("Failed to query URLs:", err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id, url string
+		err := rows.Scan(&id, &url)
+		if err != nil {
+			fmt.Println("Failed to scan row:", err)
+			continue
+		}
+		fmt.Printf("ID: %s, URL: %s\n", id, url)
+	}
+
+	if err := rows.Err(); err != nil {
+		fmt.Println("Error iterating over rows:", err)
+	}
 }
