@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"os"
 	"sync"
@@ -112,7 +113,7 @@ func (s *URLStore) SaveToFile() error {
 }
 
 type URLRepository interface {
-	AddURL(id string, url string) bool
+	AddURL(id string, url string) (string, bool)
 	GetIDByURL(url string) (string, bool)
 	GetURLByID(id string) (string, bool)
 	PrintAllURLs()
@@ -128,14 +129,23 @@ func NewPostgresURLRepository(db *pgx.Conn) *PostgresURLRepository {
 	}
 }
 
-func (r *PostgresURLRepository) AddURL(id string, url string) bool {
+func (r *PostgresURLRepository) AddURL(id string, url string) (string, bool) {
 	query := "INSERT INTO urls (id, url) VALUES ($1, $2)"
 	_, err := r.db.Exec(context.Background(), query, id, url)
 	if err != nil {
-		fmt.Println("Failed to add URL:", err)
-		return false
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+			// Проверка наличия URL в базе данных
+			urlInDB, ok := r.GetIDByURL(url)
+			if !ok {
+				fmt.Println("Failed to get ID by URL:", err)
+				return "", false
+			}
+			return urlInDB, true
+		} else {
+			fmt.Println("Failed to get ID by URL:", err)
+		}
 	}
-	return true
+	return "", true
 }
 
 func (r *PostgresURLRepository) GetIDByURL(url string) (string, bool) {

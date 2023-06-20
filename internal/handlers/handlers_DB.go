@@ -24,7 +24,7 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 	fmt.Println("Отправлена ссылка:", string(body))
 
 	var existingID string
-	existingID, _ = repo.GetIDByURL(string(body))
+	existingID, _ = repo.AddURL(id, string(body))
 	if existingID != "" {
 		existingID = strings.TrimRight(existingID, "\n")
 		shortURLout := fmt.Sprintf("%s/%s", cfg.BaseURL, existingID)
@@ -34,9 +34,6 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 		w.Write([]byte(shortURLout))
 		return
 	}
-
-	repo.AddURL(id, string(body))
-
 	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
@@ -54,7 +51,8 @@ func HandleShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.C
 	id := helpers.GenerateID(6)
 	fmt.Println("Отправлена ссылка:", req.URL)
 
-	existingID, _ := repo.GetIDByURL(req.URL)
+	var existingID string
+	existingID, _ = repo.AddURL(id, req.URL)
 	if existingID != "" {
 		fmt.Println("По этому адресу уже зарегистрирован другой адрес:", existingID)
 
@@ -74,8 +72,6 @@ func HandleShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.C
 		}
 		return "", fmt.Errorf("failed to save URL to database")
 	}
-
-	repo.AddURL(id, req.URL)
 
 	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
 	w.Header().Set("Content-Type", "application/json")
@@ -132,7 +128,7 @@ func HandleShortenBatchUseDB(w http.ResponseWriter, r *http.Request, cfg *config
 		originalURL := record["original_url"]
 		shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, correlationID)
 
-		ok := repo.AddURL(correlationID, originalURL)
+		_, ok := repo.AddURL(correlationID, originalURL)
 		if !ok {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
