@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config, repo storage.URLRepository) {
@@ -26,6 +27,7 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 	var existingID string
 	existingID, _ = repo.GetIDByURL(string(body))
 	if existingID != "" {
+		existingID = strings.TrimRight(existingID, "\n")
 		shortURLout := fmt.Sprintf("%s/%s", cfg.BaseURL, existingID)
 		fmt.Println("По этому адресу уже зарегистрирован другой адрес:")
 		http.Error(w, shortURLout, http.StatusConflict)
