@@ -22,7 +22,7 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 	}
 
 	fmt.Println("Отправлена ссылка:", string(body))
-
+	repo.PrintAllURLs()
 	var existingID string
 	var switchBool bool
 	existingID, switchBool = repo.AddURL(id, string(body))
