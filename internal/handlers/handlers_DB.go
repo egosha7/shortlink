@@ -22,7 +22,6 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 	}
 
 	fmt.Println("Отправлена ссылка:", string(body))
-	repo.PrintAllURLs()
 
 	var existingID string
 	existingID, _ = repo.GetIDByURL(string(body))
@@ -54,7 +53,6 @@ func HandleShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.C
 
 	id := helpers.GenerateID(6)
 	fmt.Println("Отправлена ссылка:", req.URL)
-	repo.PrintAllURLs()
 
 	existingID, _ := repo.GetIDByURL(req.URL)
 	if existingID != "" {
