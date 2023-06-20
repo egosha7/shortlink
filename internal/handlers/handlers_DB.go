@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/egosha7/shortlink/internal/config"
+	"github.com/egosha7/shortlink/internal/db"
 	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/go-chi/chi"
 	"github.com/jackc/pgx/v4"
 	"io"
 	"net/http"
+	"os"
 )
 
 func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config, conn *pgx.Conn) {
@@ -20,7 +22,12 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
+	fmt.Println("Отправлена ссылка:", string(body))
+	err = db.PrintAllURLs(conn)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating table: %v\n", err)
+		os.Exit(1)
+	}
 	stmt := `INSERT INTO urls (id, url) VALUES ($1, $2) ON CONFLICT (url) DO NOTHING RETURNING id`
 	row := conn.QueryRow(context.Background(), stmt, id, string(body))
 
@@ -58,7 +65,8 @@ func HandleShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.C
 	}
 
 	id := helpers.GenerateID(6)
-
+	fmt.Println("Отправлена ссылка:", req.URL)
+	err = db.PrintAllURLs(conn)
 	// Сохранение URL в базе данных
 	stmt := `INSERT INTO urls (id, url) VALUES ($1, $2) ON CONFLICT (url) DO NOTHING RETURNING id`
 	row := conn.QueryRow(context.Background(), stmt, id, req.URL)
