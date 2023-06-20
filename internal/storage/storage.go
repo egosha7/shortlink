@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"os"
@@ -134,18 +135,27 @@ func (r *PostgresURLRepository) AddURL(id string, url string) (string, bool) {
 	_, err := r.db.Exec(context.Background(), query, id, url)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
-			// Проверка наличия URL в базе данных
-			urlInDB, ok := r.GetIDByURL(url)
-			if !ok {
-				fmt.Println("Failed to get ID by URL:", err)
-				return "", false
+			if pgErr.ConstraintName == "urls_id_key" {
+				// ID уже существует в базе данных, генерируем новый
+				newID := helpers.GenerateID(6)
+				return r.AddURL(newID, url)
+			} else if pgErr.ConstraintName == "urls_url_key" {
+				// URL уже существует в базе данных, возвращаем соответствующий ID
+				urlInDB, ok := r.GetIDByURL(url)
+				if !ok {
+					fmt.Println("Failed to get ID by URL:", err)
+					return "", false
+				}
+				return urlInDB, false
+			} else {
+				fmt.Println("Failed to add URL:", err)
 			}
-			return urlInDB, true
 		} else {
-			fmt.Println("Failed to get ID by URL:", err)
+			fmt.Println("Failed to add URL:", err)
 		}
+		return "", false
 	}
-	return "", true
+	return id, true
 }
 
 func (r *PostgresURLRepository) GetIDByURL(url string) (string, bool) {
