@@ -8,6 +8,7 @@ import (
 	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/go-chi/chi"
 	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
 	"io"
 	"net/http"
@@ -23,9 +24,14 @@ func ShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.Config,
 	}
 
 	// Сохранение URL в базе данных
-	_, err = conn.Exec(context.Background(), "INSERT INTO urls (id, url) VALUES ($1, $2)", id, string(body))
+	_, err = conn.Exec(
+		context.Background(), "INSERT INTO urls (id, url) VALUES ($1, $2) ON CONFLICT (url) DO NOTHING", id,
+		string(body),
+	)
 	if err != nil {
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+		// Проверяем ошибку, чтобы определить, была ли нарушена уникальность URL
+		pgErr, ok := err.(*pgconn.PgError)
+		if ok && pgErr.Code == pgerrcode.UniqueViolation {
 			// Проверка наличия URL в базе данных
 			var url string
 			err = conn.QueryRow(context.Background(), "SELECT id FROM urls WHERE url = $1", string(body)).Scan(&url)
@@ -62,9 +68,13 @@ func HandleShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.C
 	id := helpers.GenerateID(6)
 
 	// Сохранение URL в базе данных
-	_, err = conn.Exec(context.Background(), "INSERT INTO urls (id, url) VALUES ($1, $2)", id, req.URL)
+	_, err = conn.Exec(
+		context.Background(), "INSERT INTO urls (id, url) VALUES ($1, $2) ON CONFLICT (url) DO NOTHING", id, req.URL,
+	)
 	if err != nil {
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+		// Проверяем ошибку, чтобы определить, была ли нарушена уникальность URL
+		pgErr, ok := err.(*pgconn.PgError)
+		if ok && pgErr.Code == pgerrcode.UniqueViolation {
 			// Проверка наличия URL в базе данных
 			var url string
 			err = conn.QueryRow(context.Background(), "SELECT url FROM urls WHERE url = $1", req.URL).Scan(&url)
