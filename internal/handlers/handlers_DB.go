@@ -8,7 +8,6 @@ import (
 	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/go-chi/chi"
 	"github.com/jackc/pgx/v4"
-	"github.com/lib/pq"
 	"io"
 	"net/http"
 )
@@ -61,41 +60,39 @@ func HandleShortenURLuseDB(w http.ResponseWriter, r *http.Request, cfg *config.C
 	id := helpers.GenerateID(6)
 
 	// Сохранение URL в базе данных
-	_, err = conn.Exec(
-		context.Background(), "INSERT INTO urls (id, url) VALUES ($1, $2) ON CONFLICT (url) DO NOTHING", id, req.URL,
-	)
+	stmt := `INSERT INTO urls (id, url) VALUES ($1, $2) ON CONFLICT (url) DO NOTHING RETURNING id`
+	row := conn.QueryRow(context.Background(), stmt, id, req.URL)
+
+	var existingID string
+	err = row.Scan(&existingID)
 	if err != nil {
-		// Проверяем ошибку, чтобы определить, была ли нарушена уникальность URL
-		pqErr, ok := err.(*pq.Error)
-		if ok && pqErr.Code == "23505" {
-			// Проверка наличия URL в базе данных
-			var url string
-			err = conn.QueryRow(context.Background(), "SELECT url FROM urls WHERE url = $1", req.URL).Scan(&url)
-			if err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return "", fmt.Errorf("failed to save URL to database: %w", err)
+		if existingID == "" {
+			err = conn.QueryRow(
+				context.Background(), "SELECT id FROM urls WHERE url = $1", req.URL,
+			).Scan(&existingID)
+			if err == nil {
+
+				fmt.Println("По этому адресу уже зарегистрирован другой адрес:", existingID)
+
+				response := struct {
+					Result string `json:"result"`
+				}{
+					Result: existingID,
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusConflict)
+
+				err = json.NewEncoder(w).Encode(response)
+				if err != nil {
+					http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+					return "", fmt.Errorf("failed to encode response: %w", err)
+				}
+			} else {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 			}
-
-			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
-
-			response := struct {
-				Result string `json:"result"`
-			}{
-				Result: url,
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusConflict)
-
-			err = json.NewEncoder(w).Encode(response)
-			if err != nil {
-				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-				return "", fmt.Errorf("failed to encode response: %w", err)
-			}
-		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return "", fmt.Errorf("failed to save URL to database: %w", err)
 		}
-		return "", fmt.Errorf("failed to save URL to database: %w", err)
 	}
 
 	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
