@@ -17,7 +17,7 @@ import (
 func SetupRoutes(cfg *config.Config, conn *pgx.Conn) http.Handler {
 
 	// Создание хранилища
-	store := storage.NewURLStore(cfg.FilePath, conn)
+	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn)
 
 	// Загрузка данных из файла
 	err := store.LoadFromFile()

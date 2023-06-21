@@ -23,7 +23,7 @@ func TestShortenURL(t *testing.T) {
 	}
 	conn := &pgx.Conn{}
 	// Указываем экземпляр URLStore
-	store := storage.NewURLStore(cfg.FilePath, conn)
+	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn)
 
 	// Создаем тестовый запрос
 	body := []byte("http://example.com")
@@ -76,7 +76,7 @@ func TestRedirectURL(t *testing.T) {
 
 	conn := &pgx.Conn{}
 	// Указываем экземпляр URLStore
-	store := storage.NewURLStore(cfg.FilePath, conn)
+	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn)
 
 	link := "http://example.com"
 	formData := strings.NewReader(link)

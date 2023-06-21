@@ -12,7 +12,8 @@ func ConnectToDB(cfg *config.Config) (*pgx.Conn, error) {
 
 	if cfg.DataBase == "" {
 		// Возвращаем nil, если строка подключения пуста
-		return nil, nil
+		conn := &pgx.Conn{}
+		return conn, nil
 	}
 
 	connConfig, err := pgx.ParseConfig(cfg.DataBase)
