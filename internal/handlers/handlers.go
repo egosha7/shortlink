@@ -116,6 +116,9 @@ func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore
 }
 
 func HandleShortenBatch(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *storage.URLStore) {
+
+	ctx := r.Context()
+
 	var records []map[string]string
 	err := json.NewDecoder(r.Body).Decode(&records)
 	if err != nil {
@@ -129,32 +132,11 @@ func HandleShortenBatch(w http.ResponseWriter, r *http.Request, cfg *config.Conf
 		return
 	}
 
-	// Создаем слайс для хранения результата
-	res := make([]map[string]string, 0, len(records))
-
-	// Обрабатываем каждую запись
-	for _, record := range records {
-		correlationID := record["correlation_id"]
-		originalURL := record["original_url"]
-
-		url, ok := store.GetURL(correlationID)
-		if ok {
-			fmt.Println("По этому адресу уже зарегистрирован другой адрес:", url)
-		} else {
-			store.AddURL(correlationID, originalURL)
-		}
-
-		shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, correlationID)
-
-		// Добавляем результат в ответ
-		res = append(
-			res, map[string]string{
-				"correlation_id": correlationID,
-				"short_url":      shortURL,
-			},
-		)
+	res, _ := store.AddURLwithTx(records, ctx, cfg.BaseURL)
+	if res == nil {
+		http.Error(w, "Error", http.StatusBadRequest)
+		return
 	}
-
 	// Отправляем ответ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

@@ -2,11 +2,14 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"go.uber.org/zap"
 	"os"
 	"sync"
@@ -72,6 +75,14 @@ func (s *URLStore) AddURL(id, url string) (string, bool) {
 	}
 
 	return id, true
+}
+
+func (s *URLStore) AddURLwithTx(records []map[string]string, ctx context.Context, BaseURL string) ([]map[string]string, bool) {
+	if s.DBstring != "" {
+		repo := NewPostgresURLRepository(s.db, s.logger)
+		return repo.AddURLwithTx(records, ctx, s.DBstring, BaseURL)
+	}
+	return nil, true
 }
 
 func (s *URLStore) GetURL(id string) (string, bool) {
@@ -206,6 +217,52 @@ func (r *PostgresURLRepository) addURLWithRetry(id string, url string, attempts 
 		return "", false
 	}
 	return id, true
+}
+
+func (r *PostgresURLRepository) AddURLwithTx(records []map[string]string, ctx context.Context, DBString string, BaseURL string) ([]map[string]string, bool) {
+
+	conn, err := sql.Open("pgx", DBString)
+	if err != nil {
+		r.logger.Error("Error sql.Open", zap.Error(err))
+		return nil, false
+	}
+
+	tx, err := conn.BeginTx(ctx, nil)
+	if err != nil {
+		r.logger.Error("Error BeginTx", zap.Error(err))
+		return nil, false
+	}
+	defer tx.Rollback()
+
+	res := make([]map[string]string, 0, len(records))
+
+	// Обрабатываем каждую запись
+	for _, record := range records {
+		correlationID := record["correlation_id"]
+		originalURL := record["original_url"]
+
+		_, err = tx.Exec("INSERT INTO urls (id, url) VALUES ($1, $2)", correlationID, originalURL)
+		if err != nil {
+			r.logger.Error("Error Exec", zap.Error(err))
+			return nil, false
+		}
+		shortURL := fmt.Sprintf("%s/%s", BaseURL, correlationID)
+
+		// Добавляем результат в ответ
+		res = append(
+			res, map[string]string{
+				"correlation_id": correlationID,
+				"short_url":      shortURL,
+			},
+		)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		r.logger.Error("Error commit", zap.Error(err))
+		return nil, false
+	}
+	return res, true
 }
 
 func (r *PostgresURLRepository) GetIDByURL(url string) (string, bool) {
