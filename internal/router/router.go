@@ -1,10 +1,10 @@
 package routes
 
 import (
-	"context"
 	"fmt"
 	"github.com/egosha7/shortlink/internal/compress"
 	"github.com/egosha7/shortlink/internal/config"
+	"github.com/egosha7/shortlink/internal/db"
 	"github.com/egosha7/shortlink/internal/handlers"
 	"github.com/egosha7/shortlink/internal/storage"
 	"github.com/jackc/pgx/v4"
@@ -47,13 +47,7 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn) http.Handler {
 
 			route.Get(
 				"/ping", func(w http.ResponseWriter, r *http.Request) {
-					err := conn.Ping(context.Background())
-					if err != nil {
-						http.Error(w, "Database connection error", http.StatusInternalServerError)
-						return
-					}
-
-					w.WriteHeader(http.StatusOK)
+					db.PingDB(w, r, conn)
 				},
 			)
 

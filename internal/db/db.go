@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/jackc/pgx/v4"
+	"net/http"
 )
 
 func ConnectToDB(cfg *config.Config) (*pgx.Conn, error) {
@@ -25,4 +26,14 @@ func ConnectToDB(cfg *config.Config) (*pgx.Conn, error) {
 	}
 
 	return conn, nil
+}
+
+func PingDB(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+	err := conn.Ping(context.Background())
+	if err != nil {
+		http.Error(w, "Database connection error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
