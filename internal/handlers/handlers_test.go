@@ -6,6 +6,7 @@ import (
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/db"
 	"github.com/egosha7/shortlink/internal/storage"
+	"github.com/jackc/pgx/v4"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -81,13 +82,8 @@ func TestRedirectURL(t *testing.T) {
 		FilePath: "tmp\\some3.json",
 		DataBase: "",
 	}
-	conn, err := db.ConnectToDB(cfg)
-	if err != nil {
-		t.Errorf("Error connecting to database %v", err)
-		os.Exit(1)
-	}
 
-	defer conn.Close(context.Background())
+	conn := &pgx.Conn{}
 	// Указываем экземпляр URLStore
 	store := storage.NewURLStore(cfg.FilePath, conn)
 
