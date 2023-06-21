@@ -7,7 +7,6 @@ import (
 	"github.com/egosha7/shortlink/internal/db"
 	"github.com/egosha7/shortlink/internal/loger"
 	routes "github.com/egosha7/shortlink/internal/router"
-	"github.com/egosha7/shortlink/internal/storage"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
@@ -17,16 +16,6 @@ func main() {
 
 	// Проверка конфигурации флагов и переменных окружения
 	cfg := config.OnFlag()
-
-	// Создание хранилища
-	store := storage.NewURLStore(cfg.FilePath)
-
-	// Загрузка данных из файла
-	err := store.LoadFromFile()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading data from file: %v\n", err)
-		os.Exit(1)
-	}
 
 	logger, err := loger.SetupLogger()
 	if err != nil {
@@ -42,7 +31,7 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
-	r := routes.SetupRoutes(cfg, store, conn)
+	r := routes.SetupRoutes(cfg, conn)
 
 	// Запуск сервера
 	err = http.ListenAndServe(cfg.Addr, loger.LogMiddleware(logger, r))
