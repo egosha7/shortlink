@@ -25,7 +25,7 @@ func TestShortenURL(t *testing.T) {
 	}
 	conn, err := db.ConnectToDB(cfg)
 	if err != nil {
-		t.Errorf("Error connecting to database", err)
+		t.Errorf("Error connecting to database %v", err)
 		os.Exit(1)
 	}
 
@@ -83,7 +83,7 @@ func TestRedirectURL(t *testing.T) {
 	}
 	conn, err := db.ConnectToDB(cfg)
 	if err != nil {
-		t.Errorf("Error connecting to database", err)
+		t.Errorf("Error connecting to database %v", err)
 		os.Exit(1)
 	}
 
