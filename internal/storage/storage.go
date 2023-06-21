@@ -167,6 +167,10 @@ func NewPostgresURLRepository(db *pgx.Conn) *PostgresURLRepository {
 }
 
 func (r *PostgresURLRepository) AddURL(id string, url string) (string, bool) {
+	return r.addURLWithRetry(id, url, 10)
+}
+
+func (r *PostgresURLRepository) addURLWithRetry(id string, url string, attempts int) (string, bool) {
 	query := "INSERT INTO urls (id, url) VALUES ($1, $2)"
 	_, err := r.db.Exec(context.Background(), query, id, url)
 	if err != nil {
@@ -175,8 +179,12 @@ func (r *PostgresURLRepository) AddURL(id string, url string) (string, bool) {
 			switch pgErr.ConstraintName {
 			case "urls_pkey":
 				// ID уже существует в базе данных, генерируем новый
-				newID := helpers.GenerateID(6)
-				return r.AddURL(newID, url)
+				if attempts > 0 {
+					newID := helpers.GenerateID(6)
+					return r.addURLWithRetry(newID, url, attempts-1)
+				} else {
+					fmt.Println("Exceeded maximum retry attempts.")
+				}
 			case "urls_url_key":
 				// URL уже существует в базе данных, возвращаем соответствующий ID
 				urlInDB, ok := r.GetIDByURL(url)
@@ -195,7 +203,6 @@ func (r *PostgresURLRepository) AddURL(id string, url string) (string, bool) {
 	}
 	return id, true
 }
-
 func (r *PostgresURLRepository) GetIDByURL(url string) (string, bool) {
 	var id string
 	query := "SELECT id FROM urls WHERE url = $1"
