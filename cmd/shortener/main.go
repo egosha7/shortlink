@@ -14,15 +14,15 @@ import (
 
 func main() {
 
-	// Проверка конфигурации флагов и переменных окружения
-	cfg := config.OnFlag()
-
 	logger, err := loger.SetupLogger()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating logger: %v\n", err)
 		os.Exit(1)
 	}
 	defer logger.Sync()
+
+	// Проверка конфигурации флагов и переменных окружения
+	cfg := config.OnFlag(logger)
 
 	conn, err := db.ConnectToDB(cfg)
 	if err != nil {
@@ -31,7 +31,7 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
-	r := routes.SetupRoutes(cfg, conn)
+	r := routes.SetupRoutes(cfg, conn, logger)
 
 	// Запуск сервера
 	err = http.ListenAndServe(cfg.Addr, loger.LogMiddleware(logger, r))

@@ -24,7 +24,6 @@ func ConnectToDB(cfg *config.Config) (*pgx.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return conn, nil
 }
 

@@ -2,9 +2,9 @@ package config
 
 import (
 	"flag"
-	"fmt"
 	"github.com/caarlos0/env/v6"
 	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 	"net"
 	"os"
 	"regexp"
@@ -29,7 +29,7 @@ func Default() *Config {
 }
 
 // OnFlag - функция для чтения значений из флагов командной строки и записи их в структуру Config
-func OnFlag() *Config {
+func OnFlag(logger *zap.Logger) *Config {
 	defaultValue := Default()
 
 	// Инициализация флагов командной строки
@@ -44,23 +44,23 @@ func OnFlag() *Config {
 
 	// Парсинг переменных окружения в структуру Config
 	if err := env.Parse(&config); err != nil {
-		fmt.Println("Ошибка при парсинге переменных окружения:", err)
+		logger.Error("Ошибка при парсинге переменных окружения", zap.Error(err))
 	}
 
 	// Проверка существования файла
 	if _, err := os.Stat(config.FilePath); os.IsNotExist(err) {
 		// Файл не существует
-		fmt.Println("Файл не найден")
+		logger.Error("Файл не найден", zap.Error(err))
 	} else {
 		// Файл существует
 
 		// Проверка прав доступа к файлу
 		if err := checkFileAccess(config.FilePath); err != nil {
 			// Ошибка доступа к файлу
-			fmt.Println("Ошибка доступа к файлу:", err)
+			logger.Error("Ошибка доступа к файлу", zap.Error(err))
 		} else {
 			// Файл существует и доступен для чтения
-			fmt.Println("Файл существует и доступен для чтения")
+			logger.Info("Ошибка доступа к файлу")
 		}
 	}
 

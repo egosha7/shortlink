@@ -3,11 +3,11 @@ package storage
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
+	"go.uber.org/zap"
 	"os"
 	"sync"
 )
@@ -18,6 +18,7 @@ type URLStore struct {
 	filePath string
 	DBstring string
 	db       *pgx.Conn
+	logger   *zap.Logger
 }
 
 type URL struct {
@@ -25,18 +26,19 @@ type URL struct {
 	URL string
 }
 
-func NewURLStore(filePath string, DBstring string, db *pgx.Conn) *URLStore {
+func NewURLStore(filePath string, DBstring string, db *pgx.Conn, logger *zap.Logger) *URLStore {
 	return &URLStore{
 		urls:     make([]URL, 0),
 		filePath: filePath,
 		DBstring: DBstring,
 		db:       db,
+		logger:   logger,
 	}
 }
 
 func (s *URLStore) AddURL(id, url string) (string, bool) {
 	if s.DBstring != "" {
-		repo := NewPostgresURLRepository(s.db)
+		repo := NewPostgresURLRepository(s.db, s.logger)
 		return repo.AddURL(id, url)
 	}
 
@@ -66,7 +68,7 @@ func (s *URLStore) AddURL(id, url string) (string, bool) {
 	// Сохранение данных в файл
 	err := s.SaveToFile()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error saving data to file: %v\n", err)
+		s.logger.Error("Error saving data to file", zap.Error(err))
 	}
 
 	return id, true
@@ -74,7 +76,7 @@ func (s *URLStore) AddURL(id, url string) (string, bool) {
 
 func (s *URLStore) GetURL(id string) (string, bool) {
 	if s.DBstring != "" {
-		repo := NewPostgresURLRepository(s.db)
+		repo := NewPostgresURLRepository(s.db, s.logger)
 		return repo.GetURLByID(id)
 	}
 
@@ -157,12 +159,14 @@ type URLRepository interface {
 }
 
 type PostgresURLRepository struct {
-	db *pgx.Conn
+	db     *pgx.Conn
+	logger *zap.Logger
 }
 
-func NewPostgresURLRepository(db *pgx.Conn) *PostgresURLRepository {
+func NewPostgresURLRepository(db *pgx.Conn, logger *zap.Logger) *PostgresURLRepository {
 	return &PostgresURLRepository{
-		db: db,
+		db:     db,
+		logger: logger,
 	}
 }
 
@@ -183,26 +187,27 @@ func (r *PostgresURLRepository) addURLWithRetry(id string, url string, attempts 
 					newID := helpers.GenerateID(6)
 					return r.addURLWithRetry(newID, url, attempts-1)
 				} else {
-					fmt.Println("Exceeded maximum retry attempts.")
+					r.logger.Warn("Exceeded maximum retry attempts")
 				}
 			case "urls_url_key":
 				// URL уже существует в базе данных, возвращаем соответствующий ID
 				urlInDB, ok := r.GetIDByURL(url)
 				if !ok {
-					fmt.Println("Failed to get ID by URL:", err)
+					r.logger.Error("Failed to get ID by URL", zap.Error(err))
 					return "", false
 				}
 				return urlInDB, false
 			default:
-				fmt.Println("Failed to add URL:", err)
+				r.logger.Error("Failed to add URL", zap.Error(err))
 			}
 		} else {
-			fmt.Println("Failed to add URL:", err)
+			r.logger.Error("Failed to add URL", zap.Error(err))
 		}
 		return "", false
 	}
 	return id, true
 }
+
 func (r *PostgresURLRepository) GetIDByURL(url string) (string, bool) {
 	var id string
 	query := "SELECT id FROM urls WHERE url = $1"
@@ -211,7 +216,7 @@ func (r *PostgresURLRepository) GetIDByURL(url string) (string, bool) {
 		if err == pgx.ErrNoRows {
 			return "", false
 		}
-		fmt.Println("Failed to get ID by URL:", err)
+		r.logger.Error("Failed to get ID by URL", zap.Error(err))
 		return "", false
 	}
 	return id, true
@@ -225,7 +230,7 @@ func (r *PostgresURLRepository) GetURLByID(id string) (string, bool) {
 		if err == pgx.ErrNoRows {
 			return "", false
 		}
-		fmt.Println("Failed to get URL by ID:", err)
+		r.logger.Error("Failed to get URL by ID", zap.Error(err))
 		return "", false
 	}
 	return url, true
@@ -234,7 +239,7 @@ func (r *PostgresURLRepository) GetURLByID(id string) (string, bool) {
 func (r *PostgresURLRepository) PrintAllURLs() {
 	rows, err := r.db.Query(context.Background(), "SELECT id, url FROM urls")
 	if err != nil {
-		fmt.Println("Failed to query URLs:", err)
+		r.logger.Error("Failed to query URLs", zap.Error(err))
 		return
 	}
 	defer rows.Close()
@@ -243,14 +248,18 @@ func (r *PostgresURLRepository) PrintAllURLs() {
 		var id, url string
 		err := rows.Scan(&id, &url)
 		if err != nil {
-			fmt.Println("Failed to scan row:", err)
+			r.logger.Error("Failed to scan row", zap.Error(err))
 			continue
 		}
-		fmt.Printf("ID: %s, URL: %s\n", id, url)
+		r.logger.Info(
+			"URL",
+			zap.String("ID", id),
+			zap.String("URL", url),
+		)
 	}
 
 	if err := rows.Err(); err != nil {
-		fmt.Println("Error iterating over rows:", err)
+		r.logger.Error("Error iterating over rows", zap.Error(err))
 	}
 }
 

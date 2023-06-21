@@ -1,24 +1,24 @@
 package routes
 
 import (
-	"fmt"
+	"go.uber.org/zap"
+	"net/http"
+	"os"
+
 	"github.com/egosha7/shortlink/internal/compress"
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/db"
 	"github.com/egosha7/shortlink/internal/handlers"
 	"github.com/egosha7/shortlink/internal/storage"
-	"github.com/jackc/pgx/v4"
-	"net/http"
-	"os"
-
 	"github.com/go-chi/chi"
+	"github.com/jackc/pgx/v4"
 )
 
-func SetupRoutes(cfg *config.Config, conn *pgx.Conn) http.Handler {
+func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Handler {
 
 	// Создание хранилища
-	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn)
-	repo := storage.NewPostgresURLRepository(conn)
+	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn, logger)
+	repo := storage.NewPostgresURLRepository(conn, logger)
 	if cfg.DataBase != "" {
 		repo.CreateTable()
 	}
@@ -26,7 +26,7 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn) http.Handler {
 	// Загрузка данных из файла
 	err := store.LoadFromFile()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading data from file: %v\n", err)
+		logger.Error("Error loading data from file", zap.Error(err)) // Используем логер для вывода ошибки
 		os.Exit(1)
 	}
 
