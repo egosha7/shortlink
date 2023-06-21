@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
 	"os"
 	"sync"
@@ -168,7 +169,8 @@ func (r *PostgresURLRepository) AddURL(id string, url string) (string, bool) {
 	query := "INSERT INTO urls (id, url) VALUES ($1, $2)"
 	_, err := r.db.Exec(context.Background(), query, id, url)
 	if err != nil {
-		if pgErr, ok := err.(*pgconn.PgError); ok {
+		pgErr, ok := err.(*pgconn.PgError)
+		if ok && pgErr.Code == pgerrcode.UniqueViolation {
 			switch pgErr.ConstraintName {
 			case "urls_pkey":
 				// ID уже существует в базе данных, генерируем новый
