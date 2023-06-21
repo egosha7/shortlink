@@ -134,7 +134,7 @@ func HandleShortenBatch(w http.ResponseWriter, r *http.Request, cfg *config.Conf
 
 	res, _ := store.AddURLwithTx(records, ctx, cfg.BaseURL)
 	if res == nil {
-		http.Error(w, "Error", http.StatusBadRequest)
+		http.Error(w, "StatusBadRequest", http.StatusBadRequest)
 		return
 	}
 	// Отправляем ответ

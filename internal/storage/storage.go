@@ -82,7 +82,8 @@ func (s *URLStore) AddURLwithTx(records []map[string]string, ctx context.Context
 		repo := NewPostgresURLRepository(s.db, s.logger)
 		return repo.AddURLwithTx(records, ctx, s.DBstring, BaseURL)
 	}
-	return nil, true
+	s.logger.Error("Database string no exist")
+	return nil, false
 }
 
 func (s *URLStore) GetURL(id string) (string, bool) {
