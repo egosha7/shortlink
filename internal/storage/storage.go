@@ -168,12 +168,13 @@ func (r *PostgresURLRepository) AddURL(id string, url string) (string, bool) {
 	query := "INSERT INTO urls (id, url) VALUES ($1, $2)"
 	_, err := r.db.Exec(context.Background(), query, id, url)
 	if err != nil {
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
-			if pgErr.ConstraintName == "urls_pkey" {
+		if pgErr, ok := err.(*pgconn.PgError); ok {
+			switch pgErr.ConstraintName {
+			case "urls_pkey":
 				// ID уже существует в базе данных, генерируем новый
 				newID := helpers.GenerateID(6)
 				return r.AddURL(newID, url)
-			} else if pgErr.ConstraintName == "urls_url_key" {
+			case "urls_url_key":
 				// URL уже существует в базе данных, возвращаем соответствующий ID
 				urlInDB, ok := r.GetIDByURL(url)
 				if !ok {
@@ -181,7 +182,7 @@ func (r *PostgresURLRepository) AddURL(id string, url string) (string, bool) {
 					return "", false
 				}
 				return urlInDB, false
-			} else {
+			default:
 				fmt.Println("Failed to add URL:", err)
 			}
 		} else {
