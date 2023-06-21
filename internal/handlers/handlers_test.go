@@ -2,10 +2,13 @@ package handlers_test
 
 import (
 	"bytes"
+	"context"
 	"github.com/egosha7/shortlink/internal/config"
+	"github.com/egosha7/shortlink/internal/db"
 	"github.com/egosha7/shortlink/internal/storage"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -18,9 +21,17 @@ func TestShortenURL(t *testing.T) {
 		Addr:     "localhost:8080",
 		BaseURL:  "http://localhost:8080",
 		FilePath: "tmp\\some3.json",
+		DataBase: "",
 	}
+	conn, err := db.ConnectToDB(cfg)
+	if err != nil {
+		t.Errorf("Error connecting to database", err)
+		os.Exit(1)
+	}
+
+	defer conn.Close(context.Background())
 	// Указываем экземпляр URLStore
-	store := storage.NewURLStore(cfg.FilePath)
+	store := storage.NewURLStore(cfg.FilePath, conn)
 
 	// Создаем тестовый запрос
 	body := []byte("http://example.com")
@@ -68,10 +79,17 @@ func TestRedirectURL(t *testing.T) {
 		Addr:     "localhost:8080",
 		BaseURL:  "http://localhost:8080",
 		FilePath: "tmp\\some3.json",
+		DataBase: "",
+	}
+	conn, err := db.ConnectToDB(cfg)
+	if err != nil {
+		t.Errorf("Error connecting to database", err)
+		os.Exit(1)
 	}
 
+	defer conn.Close(context.Background())
 	// Указываем экземпляр URLStore
-	store := storage.NewURLStore(cfg.FilePath)
+	store := storage.NewURLStore(cfg.FilePath, conn)
 
 	link := "http://example.com"
 	formData := strings.NewReader(link)

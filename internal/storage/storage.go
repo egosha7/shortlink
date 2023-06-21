@@ -15,7 +15,6 @@ type URLStore struct {
 	urls     []URL
 	mu       sync.RWMutex
 	filePath string
-	DBstring string
 	db       *pgx.Conn
 }
 
@@ -24,17 +23,16 @@ type URL struct {
 	URL string
 }
 
-func NewURLStore(filePath string, DBstring string, db *pgx.Conn) *URLStore {
+func NewURLStore(filePath string, db *pgx.Conn) *URLStore {
 	return &URLStore{
 		urls:     make([]URL, 0),
 		filePath: filePath,
-		DBstring: DBstring,
 		db:       db,
 	}
 }
 
 func (s *URLStore) AddURL(id, url string) (string, bool) {
-	if s.DBstring != "" {
+	if s.db != nil {
 		repo := NewPostgresURLRepository(s.db)
 		return repo.AddURL(id, url)
 	}
@@ -72,7 +70,7 @@ func (s *URLStore) AddURL(id, url string) (string, bool) {
 }
 
 func (s *URLStore) GetURL(id string) (string, bool) {
-	if s.DBstring != "" {
+	if s.db != nil {
 		repo := NewPostgresURLRepository(s.db)
 		return repo.GetURLByID(id)
 	}
