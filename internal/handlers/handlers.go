@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/egosha7/shortlink/internal/storage"
 	"github.com/go-chi/chi"
@@ -14,7 +13,7 @@ import (
 
 type Key string
 
-func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *storage.URLStore) {
+func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
 	id := helpers.GenerateID(6)
 
 	body, err := io.ReadAll(r.Body)
@@ -28,7 +27,7 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, stor
 	existingID, switchBool = store.AddURL(id, string(body))
 	if existingID != "" && !switchBool {
 		existingID = strings.TrimRight(existingID, "\n")
-		shortURLout := fmt.Sprintf("%s/%s", cfg.BaseURL, existingID)
+		shortURLout := fmt.Sprintf("%s/%s", BaseURL, existingID)
 		fmt.Println("По этому адресу уже зарегистрирован другой адрес:")
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusConflict)
@@ -38,7 +37,7 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, stor
 		id = existingID
 	}
 
-	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
+	shortURL := fmt.Sprintf("%s/%s", BaseURL, id)
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprint(w, shortURL)
@@ -48,7 +47,7 @@ type ShortenURLRequest struct {
 	URL string `json:"url"`
 }
 
-func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *storage.URLStore) (string, error) {
+func HandleShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) (string, error) {
 
 	var req ShortenURLRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -85,7 +84,7 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, cfg *config.Config
 		id = existingID
 	}
 
-	shortURL := fmt.Sprintf("%s/%s", cfg.BaseURL, id)
+	shortURL := fmt.Sprintf("%s/%s", BaseURL, id)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
@@ -115,7 +114,7 @@ func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-func HandleShortenBatch(w http.ResponseWriter, r *http.Request, cfg *config.Config, store *storage.URLStore) {
+func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
 
 	ctx := r.Context()
 
@@ -132,7 +131,7 @@ func HandleShortenBatch(w http.ResponseWriter, r *http.Request, cfg *config.Conf
 		return
 	}
 
-	res, _ := store.AddURLwithTx(records, ctx, cfg.BaseURL)
+	res, _ := store.AddURLwithTx(records, ctx, BaseURL)
 	if res == nil {
 		http.Error(w, "StatusBadRequest", http.StatusBadRequest)
 		return
