@@ -152,6 +152,7 @@ type URLRepository interface {
 	AddURL(id string, url string) (string, bool)
 	GetIDByURL(url string) (string, bool)
 	GetURLByID(id string) (string, bool)
+	CreateTable()
 	PrintAllURLs()
 }
 
@@ -244,4 +245,21 @@ func (r *PostgresURLRepository) PrintAllURLs() {
 	if err := rows.Err(); err != nil {
 		fmt.Println("Error iterating over rows:", err)
 	}
+}
+
+func (r *PostgresURLRepository) CreateTable() error {
+	_, err := r.db.Exec(
+		context.Background(), `
+		CREATE TABLE IF NOT EXISTS urls (
+			ID TEXT PRIMARY KEY,
+			URL TEXT,
+			UNIQUE (URL)
+		)
+	`,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

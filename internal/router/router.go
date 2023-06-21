@@ -18,6 +18,10 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn) http.Handler {
 
 	// Создание хранилища
 	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn)
+	repo := storage.NewPostgresURLRepository(conn)
+	if cfg.DataBase != "" {
+		repo.CreateTable()
+	}
 
 	// Загрузка данных из файла
 	err := store.LoadFromFile()
