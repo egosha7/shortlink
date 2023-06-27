@@ -14,6 +14,11 @@ import (
 type Key string
 
 func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
+	_, err := r.Cookie(cookieName)
+	if err != nil {
+		SetCookieHandler(w, r)
+	}
+
 	// Получение идентификатора пользователя из куки
 	userID := GetCookieHandler(w, r)
 	if userID == "" {
@@ -48,6 +53,11 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storage.U
 }
 
 func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
+	_, err := r.Cookie(cookieName)
+	if err != nil {
+		SetCookieHandler(w, r)
+	}
+
 	id := helpers.GenerateID(6)
 
 	userID := GetCookieHandler(w, r)
@@ -84,9 +94,13 @@ type ShortenURLRequest struct {
 }
 
 func HandleShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) (string, error) {
+	_, err := r.Cookie(cookieName)
+	if err != nil {
+		SetCookieHandler(w, r)
+	}
 
 	var req ShortenURLRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err = json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return "", fmt.Errorf("failed to decode request body: %w", err)
@@ -142,6 +156,11 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, st
 }
 
 func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
+	_, err := r.Cookie(cookieName)
+	if err != nil {
+		SetCookieHandler(w, r)
+	}
+
 	id := chi.URLParam(r, "id")
 	url, ok := store.GetURL(id)
 	if !ok {
@@ -152,13 +171,17 @@ func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore
 }
 
 func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
+	_, err := r.Cookie(cookieName)
+	if err != nil {
+		SetCookieHandler(w, r)
+	}
 
 	ctx := r.Context()
 
 	userID := GetCookieHandler(w, r)
 
 	var records []map[string]string
-	err := json.NewDecoder(r.Body).Decode(&records)
+	err = json.NewDecoder(r.Body).Decode(&records)
 	if err != nil {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
