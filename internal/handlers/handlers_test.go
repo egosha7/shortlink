@@ -2,10 +2,14 @@ package handlers_test
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/egosha7/shortlink/internal/config"
+	"github.com/egosha7/shortlink/internal/loger"
 	"github.com/egosha7/shortlink/internal/storage"
+	"github.com/jackc/pgx/v4"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -18,9 +22,18 @@ func TestShortenURL(t *testing.T) {
 		Addr:     "localhost:8080",
 		BaseURL:  "http://localhost:8080",
 		FilePath: "tmp\\some3.json",
+		DataBase: "",
 	}
+	conn := &pgx.Conn{}
+
+	logger, err := loger.SetupLogger()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating logger: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Указываем экземпляр URLStore
-	store := storage.NewURLStore(cfg.FilePath)
+	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn, logger)
 
 	// Создаем тестовый запрос
 	body := []byte("http://example.com")
@@ -38,7 +51,7 @@ func TestShortenURL(t *testing.T) {
 	// Регистрируем обработчик
 	r.HandleFunc(
 		`/`, func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg, store)
+			handlers.ShortenURL(w, r, cfg.BaseURL, store)
 		},
 	)
 
@@ -68,10 +81,19 @@ func TestRedirectURL(t *testing.T) {
 		Addr:     "localhost:8080",
 		BaseURL:  "http://localhost:8080",
 		FilePath: "tmp\\some3.json",
+		DataBase: "",
+	}
+
+	conn := &pgx.Conn{}
+
+	logger, err := loger.SetupLogger()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating logger: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Указываем экземпляр URLStore
-	store := storage.NewURLStore(cfg.FilePath)
+	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn, logger)
 
 	link := "http://example.com"
 	formData := strings.NewReader(link)
@@ -90,7 +112,7 @@ func TestRedirectURL(t *testing.T) {
 	// Регистрируем обработчик
 	r.Post(
 		"/", func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg, store)
+			handlers.ShortenURL(w, r, cfg.BaseURL, store)
 		},
 	)
 

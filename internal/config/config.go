@@ -2,9 +2,9 @@ package config
 
 import (
 	"flag"
-	"fmt"
 	"github.com/caarlos0/env/v6"
 	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 	"net"
 	"os"
 	"regexp"
@@ -15,6 +15,7 @@ type Config struct {
 	Addr     string `env:"SERVER_ADDRESS"`    // Адрес сервера
 	BaseURL  string `env:"BASE_URL"`          // Базовый адрес результирующего сокращенного URL
 	FilePath string `env:"FILE_STORAGE_PATH"` // Путь к файлу для сохранения данных
+	DataBase string `env:"DATABASE_DSN"`      // Адрес базы данных
 }
 
 // Default - функция для создания новой конфигурации с значениями по умолчанию
@@ -23,11 +24,12 @@ func Default() *Config {
 		Addr:     "localhost:8080",
 		BaseURL:  "http://localhost:8080",
 		FilePath: "",
+		DataBase: "", // postgres://postgres:egosha@localhost:5432/shortlink
 	}
 }
 
 // OnFlag - функция для чтения значений из флагов командной строки и записи их в структуру Config
-func OnFlag() *Config {
+func OnFlag(logger *zap.Logger) *Config {
 	defaultValue := Default()
 
 	// Инициализация флагов командной строки
@@ -35,29 +37,30 @@ func OnFlag() *Config {
 	flag.StringVar(&config.Addr, "a", defaultValue.Addr, "HTTP-адрес сервера")
 	flag.StringVar(&config.BaseURL, "b", defaultValue.BaseURL, "Базовый адрес результирующего сокращенного URL")
 	flag.StringVar(&config.FilePath, "f", defaultValue.FilePath, "Путь к файлу данных")
+	flag.StringVar(&config.DataBase, "d", defaultValue.DataBase, "Адрес базы данных")
 	flag.Parse()
 
 	godotenv.Load()
 
 	// Парсинг переменных окружения в структуру Config
 	if err := env.Parse(&config); err != nil {
-		fmt.Println("Ошибка при парсинге переменных окружения:", err)
+		logger.Error("Ошибка при парсинге переменных окружения", zap.Error(err))
 	}
 
 	// Проверка существования файла
 	if _, err := os.Stat(config.FilePath); os.IsNotExist(err) {
 		// Файл не существует
-		fmt.Println("Файл не найден")
+		logger.Error("Файл не найден", zap.Error(err))
 	} else {
 		// Файл существует
 
 		// Проверка прав доступа к файлу
 		if err := checkFileAccess(config.FilePath); err != nil {
 			// Ошибка доступа к файлу
-			fmt.Println("Ошибка доступа к файлу:", err)
+			logger.Error("Ошибка доступа к файлу", zap.Error(err))
 		} else {
 			// Файл существует и доступен для чтения
-			fmt.Println("Файл существует и доступен для чтения")
+			logger.Info("Ошибка доступа к файлу")
 		}
 	}
 
