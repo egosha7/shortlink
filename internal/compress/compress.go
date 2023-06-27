@@ -2,6 +2,7 @@ package compress
 
 import (
 	"compress/gzip"
+	"github.com/egosha7/shortlink/internal/handlers"
 	"net/http"
 )
 
@@ -22,6 +23,11 @@ func (m *GzipMiddleware) Apply(next http.Handler) http.Handler {
 				r.Body = http.MaxBytesReader(w, gz, r.ContentLength)
 				r.Header.Del("Content-Encoding")
 				r.Header.Del("Content-Length")
+			}
+
+			_, err := r.Cookie(handlers.CookieName)
+			if err != nil {
+				handlers.SetCookieHandler(w, r)
 			}
 
 			// Передаем управление следующему обработчику

@@ -53,7 +53,7 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 
 			route.Get(
 				"/api/user/urls", func(w http.ResponseWriter, r *http.Request) {
-					handlers.GetUserURLsHandler(w, r, store)
+					handlers.GetUserURLsHandler(w, r, cfg.BaseURL, store)
 				},
 			)
 

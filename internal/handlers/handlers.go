@@ -13,11 +13,11 @@ import (
 
 type Key string
 
-func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
+func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
 	// Получение идентификатора пользователя из куки
 	userID := GetCookieHandler(w, r)
 
-	_, err := r.Cookie(cookieName)
+	_, err := r.Cookie(CookieName)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -37,7 +37,7 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storage.U
 	for _, u := range urls {
 		response = append(
 			response, map[string]string{
-				"short_url":    u.ID,
+				"short_url":    BaseURL + u.ID,
 				"original_url": u.URL,
 			},
 		)
