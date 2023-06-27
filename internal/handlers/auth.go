@@ -93,7 +93,10 @@ func SetCookieHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetCookieHandler(w http.ResponseWriter, r *http.Request) string {
-
+	_, err := r.Cookie(cookieName)
+	if err != nil {
+		SetCookieHandler(w, r)
+	}
 	// Получаем секретный ключ для подписи
 	secretKey := []byte("your-secret-key")
 
