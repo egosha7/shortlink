@@ -16,8 +16,9 @@ type Key string
 func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
 	// Получение идентификатора пользователя из куки
 	userID := GetCookieHandler(w, r)
-	if userID == "" {
-		// Если кука не содержит ID пользователя, возвращаем статус 401 Unauthorized
+
+	_, err := r.Cookie(cookieName)
+	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
