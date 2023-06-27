@@ -6,6 +6,7 @@ require github.com/go-chi/chi v1.5.4
 
 require (
 	github.com/caarlos0/env/v6 v6.10.1 // indirect
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/go-resty/resty/v2 v2.7.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.14.0 // indirect
