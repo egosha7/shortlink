@@ -1,16 +1,13 @@
 package helpers
 
 import (
-	"encoding/base64"
-	"math/rand"
+	"github.com/google/uuid"
 )
 
 func GenerateID(n int) string {
-	// генерация случайного идентификатора
-	b := make([]byte, n)
-	_, err := rand.Read(b)
-	if err != nil {
-		return ""
+	id := uuid.New().String()
+	if n < len(id) {
+		return id[:n]
 	}
-	return base64.URLEncoding.EncodeToString(b)[:n]
+	return id
 }
