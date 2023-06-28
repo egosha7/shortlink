@@ -211,7 +211,7 @@ func NewPostgresURLRepository(db *pgx.Conn, logger *zap.Logger, DataBase string)
 	if err != nil {
 		fmt.Printf(err.Error())
 	}
-	config.MaxConns = 100
+	config.MaxConns = 1000
 	// Создание пула подключений
 	pool, err := pgxpool.ConnectConfig(context.Background(), config)
 	if err != nil {
