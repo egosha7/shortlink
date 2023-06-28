@@ -26,13 +26,19 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
 		userID = r.Context().Value("userID").(string)
-		newCtx := WithUserIDContext(r.Context(), "")
+		newCtx := context.WithValue(r.Context(), UserIDKey, nil)
 		r = r.WithContext(newCtx)
 	} else {
 		if userID == "" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
+	}
+
+	_, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	// Получение сокращенных URL пользователя из хранилища
@@ -61,10 +67,6 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 
-}
-
-func WithUserIDContext(ctx context.Context, userID string) context.Context {
-	return context.WithValue(ctx, UserIDKey, userID)
 }
 
 func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
