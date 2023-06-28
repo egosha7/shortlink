@@ -12,7 +12,9 @@ import (
 	"strings"
 )
 
-type Key string
+type contextKey string
+
+const userIDKey contextKey = "userID"
 
 func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
 	// Получение идентификатора пользователя из куки
@@ -21,9 +23,8 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	setCookieHeader := w.Header().Get("Set-Cookie")
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
-		userID = r.Context().Value("userID").(string)
-		newCtx := context.WithValue(r.Context(), "userID", nil)
-		r = r.WithContext(newCtx)
+		userID = getUserIDFromContext(r.Context())
+		r = r.WithContext(context.WithValue(r.Context(), userIDKey, nil))
 	} else {
 		if userID == "" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -56,7 +57,6 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	// Отправка ответа в формате JSON
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
-
 }
 
 func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
@@ -67,9 +67,8 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 	setCookieHeader := w.Header().Get("Set-Cookie")
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
-		userID = r.Context().Value("userID").(string)
-		newCtx := context.WithValue(r.Context(), "userID", nil)
-		r = r.WithContext(newCtx)
+		userID = getUserIDFromContext(r.Context())
+		r = r.WithContext(context.WithValue(r.Context(), userIDKey, nil))
 	}
 
 	body, err := io.ReadAll(r.Body)
@@ -174,7 +173,6 @@ func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore
 }
 
 func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
-
 	ctx := r.Context()
 
 	userID := GetCookieHandler(w, r)
@@ -201,4 +199,11 @@ func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(res)
+}
+
+func getUserIDFromContext(ctx context.Context) string {
+	if userID, ok := ctx.Value(userIDKey).(string); ok {
+		return userID
+	}
+	return ""
 }
