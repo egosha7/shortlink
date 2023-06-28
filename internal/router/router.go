@@ -80,13 +80,13 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 
 			route.Get(
 				"/api/user/urls", func(w http.ResponseWriter, r *http.Request) {
-					handlers.GetUserURLsHandler(w, r, cfg.BaseURL, store)
+					handlers.GetUserURLsHandler(w, r, cfg.BaseURL, store, logger)
 				},
 			)
 
 			route.Post(
 				"/", func(w http.ResponseWriter, r *http.Request) {
-					handlers.ShortenURL(w, r, cfg.BaseURL, store)
+					handlers.ShortenURL(w, r, cfg.BaseURL, store, logger)
 				},
 			)
 

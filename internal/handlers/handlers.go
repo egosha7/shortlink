@@ -7,6 +7,7 @@ import (
 	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/egosha7/shortlink/internal/storage"
 	"github.com/go-chi/chi"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"strings"
@@ -63,13 +64,12 @@ func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storag
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
+func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore, logger *zap.Logger) {
 	// Получение идентификатора пользователя из куки
 	userID := GetCookieHandler(w, r)
-
 	setCookieHeader := w.Header().Get("Set-Cookie")
 	if setCookieHeader != "" {
-		fmt.Println("Cookie set in the response:", setCookieHeader)
+		logger.Info("Cookie set in the response:" + setCookieHeader)
 		userID = r.Context().Value(UserIDKey).(string)
 		newCtx := context.WithValue(r.Context(), UserIDKey, "")
 		r = r.WithContext(newCtx)
@@ -114,13 +114,14 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 
 }
 
-func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
+func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore, logger *zap.Logger) {
 	id := helpers.GenerateID(6)
 
 	userID := GetCookieHandler(w, r)
 
 	setCookieHeader := w.Header().Get("Set-Cookie")
 	if setCookieHeader != "" {
+
 		fmt.Println("Cookie set in the response:", setCookieHeader)
 		userID = r.Context().Value(UserIDKey).(string)
 		newCtx := context.WithValue(r.Context(), UserIDKey, "")
@@ -133,7 +134,7 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 		return
 	}
 
-	fmt.Println(string(body))
+	logger.Info("Request body (POST /)" + string(body))
 
 	var existingID string
 	var switchBool bool

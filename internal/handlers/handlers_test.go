@@ -53,7 +53,7 @@ func TestShortenURL(t *testing.T) {
 	// Регистрируем обработчик
 	r.HandleFunc(
 		`/`, func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg.BaseURL, store)
+			handlers.ShortenURL(w, r, cfg.BaseURL, store, logger)
 		},
 	)
 
@@ -115,7 +115,7 @@ func TestRedirectURL(t *testing.T) {
 	// Регистрируем обработчик
 	r.Post(
 		"/", func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg.BaseURL, store)
+			handlers.ShortenURL(w, r, cfg.BaseURL, store, logger)
 		},
 	)
 
