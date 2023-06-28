@@ -243,8 +243,10 @@ func (r *PostgresURLRepository) DeleteURLs(url string, userID string) error {
 	_, err = conn.Exec(context.Background(), query, userID, url)
 	if err != nil {
 		fmt.Printf(err.Error())
+		conn.Release()
 		return err
 	}
+	conn.Release()
 	return nil
 }
 
@@ -271,6 +273,7 @@ func (r *PostgresURLRepository) addURLWithRetry(id string, url string, userID st
 				// ID уже существует в базе данных, генерируем новый
 				if attempts > 0 {
 					newID := helpers.GenerateID(6)
+					conn.Release()
 					return r.addURLWithRetry(newID, url, userID, attempts-1)
 				} else {
 					r.logger.Warn("Exceeded maximum retry attempts")
@@ -279,16 +282,20 @@ func (r *PostgresURLRepository) addURLWithRetry(id string, url string, userID st
 				// URL уже существует в базе данных, возвращаем соответствующий ID
 				urlInDB, ok := r.GetIDByURL(url)
 				if !ok {
+					conn.Release()
 					r.logger.Error("Failed to get ID by URL", zap.Error(err))
 					return "", false
 				}
+				conn.Release()
 				return urlInDB, false
 			default:
 				r.logger.Error("Failed to add URL", zap.Error(err))
 			}
 		} else {
+			conn.Release()
 			r.logger.Error("Failed to add URL", zap.Error(err))
 		}
+		conn.Release()
 		return "", false
 	}
 
@@ -297,9 +304,10 @@ func (r *PostgresURLRepository) addURLWithRetry(id string, url string, userID st
 	_, userErr := conn.Exec(context.Background(), userQuery, id, userID)
 	if userErr != nil {
 		r.logger.Error("Failed to add user URL", zap.Error(userErr))
+		conn.Release()
 		return "", false
 	}
-
+	conn.Release()
 	return id, true
 }
 
@@ -386,6 +394,7 @@ func (r *PostgresURLRepository) GetURLByID(id string, DataBase string) (string, 
 			return "", false
 		}
 		r.logger.Error("Failed to get URL by ID", zap.Error(err))
+		conn.Release()
 		return "", false
 	}
 
@@ -394,6 +403,7 @@ func (r *PostgresURLRepository) GetURLByID(id string, DataBase string) (string, 
 	err = r.db.QueryRow(context.Background(), query, id).Scan(&delFlag)
 	if err != nil {
 		if err == pgx.ErrNoRows {
+			conn.Release()
 			return "", false
 		}
 		r.logger.Error("Failed to get delFLAG by IDshortURL", zap.Error(err))
@@ -401,9 +411,10 @@ func (r *PostgresURLRepository) GetURLByID(id string, DataBase string) (string, 
 	}
 
 	if delFlag {
+		conn.Release()
 		return url, false
 	}
-
+	conn.Release()
 	return url, true
 }
 
