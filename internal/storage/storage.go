@@ -43,8 +43,8 @@ func NewURLStore(filePath string, DBstring string, db *pgx.Conn, logger *zap.Log
 
 func (s *URLStore) DeleteURLs(url string, userID string) error {
 	if s.DBstring != "" {
-		repo := NewPostgresURLRepository(s.db, s.logger)
-		return repo.DeleteURLs(url, userID, s.DBstring)
+		repo := NewPostgresURLRepository(s.db, s.logger, s.DBstring)
+		return repo.DeleteURLs(url, userID)
 	}
 	s.logger.Error("Database string no exist")
 	return nil
@@ -52,8 +52,8 @@ func (s *URLStore) DeleteURLs(url string, userID string) error {
 
 func (s *URLStore) AddURL(id, url, userID string) (string, bool) {
 	if s.DBstring != "" {
-		repo := NewPostgresURLRepository(s.db, s.logger)
-		return repo.AddURL(id, url, userID, s.DBstring)
+		repo := NewPostgresURLRepository(s.db, s.logger, s.DBstring)
+		return repo.AddURL(id, url, userID)
 	}
 
 	s.mu.Lock()
@@ -90,7 +90,7 @@ func (s *URLStore) AddURL(id, url, userID string) (string, bool) {
 
 func (s *URLStore) AddURLwithTx(records []map[string]string, ctx context.Context, BaseURL string, userID string) ([]map[string]string, bool) {
 	if s.DBstring != "" {
-		repo := NewPostgresURLRepository(s.db, s.logger)
+		repo := NewPostgresURLRepository(s.db, s.logger, s.DBstring)
 		return repo.AddURLwithTx(records, ctx, s.DBstring, BaseURL, userID)
 	}
 	s.logger.Error("Database string no exist")
@@ -99,7 +99,7 @@ func (s *URLStore) AddURLwithTx(records []map[string]string, ctx context.Context
 
 func (s *URLStore) GetURL(id string) (string, bool) {
 	if s.DBstring != "" {
-		repo := NewPostgresURLRepository(s.db, s.logger)
+		repo := NewPostgresURLRepository(s.db, s.logger, s.DBstring)
 		return repo.GetURLByID(id, s.DBstring)
 	}
 
@@ -115,7 +115,7 @@ func (s *URLStore) GetURL(id string) (string, bool) {
 
 func (s *URLStore) GetURLsByUserID(userID string) []URL {
 	if s.DBstring != "" {
-		repo := NewPostgresURLRepository(s.db, s.logger)
+		repo := NewPostgresURLRepository(s.db, s.logger, s.DBstring)
 		return repo.GetURLsByUserID(userID)
 	}
 	s.mu.RLock()
@@ -203,17 +203,10 @@ type URLRepository interface {
 type PostgresURLRepository struct {
 	db     *pgx.Conn
 	logger *zap.Logger
+	pool   *pgxpool.Pool
 }
 
-func NewPostgresURLRepository(db *pgx.Conn, logger *zap.Logger) *PostgresURLRepository {
-	return &PostgresURLRepository{
-		db:     db,
-		logger: logger,
-	}
-}
-
-func (r *PostgresURLRepository) DeleteURLs(url string, userID string, DataBase string) error {
-	// Создание конфигурации пула подключений
+func NewPostgresURLRepository(db *pgx.Conn, logger *zap.Logger, DataBase string) *PostgresURLRepository {
 	config, err := pgxpool.ParseConfig(DataBase)
 	if err != nil {
 		fmt.Printf(err.Error())
@@ -225,8 +218,16 @@ func (r *PostgresURLRepository) DeleteURLs(url string, userID string, DataBase s
 		fmt.Printf(err.Error())
 	}
 
+	return &PostgresURLRepository{
+		db:     db,
+		logger: logger,
+		pool:   pool,
+	}
+}
+
+func (r *PostgresURLRepository) DeleteURLs(url string, userID string) error {
 	// Использование пула подключений для выполнения запросов
-	conn, err := pool.Acquire(context.Background())
+	conn, err := r.pool.Acquire(context.Background())
 	if err != nil {
 		fmt.Printf(err.Error())
 	}
@@ -247,25 +248,14 @@ func (r *PostgresURLRepository) DeleteURLs(url string, userID string, DataBase s
 	return nil
 }
 
-func (r *PostgresURLRepository) AddURL(id string, url string, userID string, DataBase string) (string, bool) {
-	return r.addURLWithRetry(id, url, userID, 10, DataBase)
+func (r *PostgresURLRepository) AddURL(id string, url string, userID string) (string, bool) {
+	return r.addURLWithRetry(id, url, userID, 10)
 }
 
-func (r *PostgresURLRepository) addURLWithRetry(id string, url string, userID string, attempts int, DataBase string) (string, bool) {
-	// Создание конфигурации пула подключений
-	config, err := pgxpool.ParseConfig(DataBase)
-	if err != nil {
-		fmt.Printf(err.Error())
-	}
-
-	// Создание пула подключений
-	pool, err := pgxpool.ConnectConfig(context.Background(), config)
-	if err != nil {
-		fmt.Printf(err.Error())
-	}
+func (r *PostgresURLRepository) addURLWithRetry(id string, url string, userID string, attempts int) (string, bool) {
 
 	// Использование пула подключений для выполнения запросов
-	conn, err := pool.Acquire(context.Background())
+	conn, err := r.pool.Acquire(context.Background())
 	if err != nil {
 		fmt.Printf(err.Error())
 	}
@@ -281,7 +271,7 @@ func (r *PostgresURLRepository) addURLWithRetry(id string, url string, userID st
 				// ID уже существует в базе данных, генерируем новый
 				if attempts > 0 {
 					newID := helpers.GenerateID(6)
-					return r.addURLWithRetry(newID, url, userID, attempts-1, DataBase)
+					return r.addURLWithRetry(newID, url, userID, attempts-1)
 				} else {
 					r.logger.Warn("Exceeded maximum retry attempts")
 				}
@@ -381,19 +371,8 @@ func (r *PostgresURLRepository) GetIDByURL(url string) (string, bool) {
 }
 
 func (r *PostgresURLRepository) GetURLByID(id string, DataBase string) (string, bool) {
-	config, err := pgxpool.ParseConfig(DataBase)
-	if err != nil {
-		fmt.Printf(err.Error())
-	}
-
-	// Создание пула подключений
-	pool, err := pgxpool.ConnectConfig(context.Background(), config)
-	if err != nil {
-		fmt.Printf(err.Error())
-	}
-
 	// Использование пула подключений для выполнения запросов
-	conn, err := pool.Acquire(context.Background())
+	conn, err := r.pool.Acquire(context.Background())
 	if err != nil {
 		fmt.Printf(err.Error())
 	}

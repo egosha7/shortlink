@@ -19,7 +19,7 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 
 	// Создание хранилища
 	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn, logger)
-	repo := storage.NewPostgresURLRepository(conn, logger)
+	repo := storage.NewPostgresURLRepository(conn, logger, cfg.DataBase)
 	if cfg.DataBase != "" {
 		repo.CreateTable()
 	}
