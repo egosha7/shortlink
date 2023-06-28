@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/egosha7/shortlink/internal/helpers"
@@ -21,6 +22,8 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
 		userID = r.Context().Value("userID").(string)
+		newCtx := context.WithValue(r.Context(), "userID", nil)
+		r = r.WithContext(newCtx)
 	} else {
 		if userID == "" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -60,6 +63,14 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 	id := helpers.GenerateID(6)
 
 	userID := GetCookieHandler(w, r)
+
+	setCookieHeader := w.Header().Get("Set-Cookie")
+	if setCookieHeader != "" {
+		fmt.Println("Cookie set in the response:", setCookieHeader)
+		userID = r.Context().Value("userID").(string)
+		newCtx := context.WithValue(r.Context(), "userID", nil)
+		r = r.WithContext(newCtx)
+	}
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
