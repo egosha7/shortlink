@@ -49,7 +49,7 @@ func VerifySignedCookie(r *http.Request, secretKey []byte) (string, error) {
 	// Получаем значение куки из запроса
 	cookie, err := r.Cookie(CookieName)
 	if err != nil {
-		return "", fmt.Errorf("Cookie not found")
+		return "", fmt.Errorf("сookie not found")
 	}
 
 	// Проверяем подпись куки и получаем токен
@@ -57,7 +57,7 @@ func VerifySignedCookie(r *http.Request, secretKey []byte) (string, error) {
 		cookie.Value, func(token *jwt.Token) (interface{}, error) {
 			// Проверяем, что используется правильный алгоритм подписи
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("Unexpected signing method")
+				return nil, fmt.Errorf("unexpected signing method")
 			}
 
 			// Возвращаем секретный ключ для проверки подписи
@@ -76,7 +76,7 @@ func VerifySignedCookie(r *http.Request, secretKey []byte) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("Invalid cookie")
+	return "", fmt.Errorf("invalid cookie")
 }
 
 func SetCookieHandler(w http.ResponseWriter, r *http.Request) string {
