@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"github.com/egosha7/shortlink/internal/cookieMW"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
@@ -39,7 +38,6 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 	// Создание группы роутера
 	r.Group(
 		func(route chi.Router) {
-			route.Use(cookieMW.CookieMiddleware)
 			route.Use(gzipMiddleware.Apply)
 
 			route.Get(
