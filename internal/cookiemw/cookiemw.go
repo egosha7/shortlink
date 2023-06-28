@@ -6,10 +6,6 @@ import (
 	"net/http"
 )
 
-type contextKey string
-
-const userIDKey = contextKey("userID")
-
 func CookieMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -19,7 +15,7 @@ func CookieMiddleware(next http.Handler) http.Handler {
 			if err != nil || cookie == nil {
 				// Кука не существует
 				id := handlers.SetCookieHandler(w, r)
-				ctx := context.WithValue(r.Context(), userIDKey, id)
+				ctx := context.WithValue(r.Context(), handlers.UserIDKey, id)
 				r = r.WithContext(ctx)
 			}
 
