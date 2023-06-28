@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"go.uber.org/zap"
 	"os"
@@ -43,7 +44,7 @@ func NewURLStore(filePath string, DBstring string, db *pgx.Conn, logger *zap.Log
 func (s *URLStore) DeleteURLs(url string, userID string) error {
 	if s.DBstring != "" {
 		repo := NewPostgresURLRepository(s.db, s.logger)
-		return repo.DeleteURLs(url, userID)
+		return repo.DeleteURLs(url, userID, s.DBstring)
 	}
 	s.logger.Error("Database string no exist")
 	return nil
@@ -211,7 +212,26 @@ func NewPostgresURLRepository(db *pgx.Conn, logger *zap.Logger) *PostgresURLRepo
 	}
 }
 
-func (r *PostgresURLRepository) DeleteURLs(url string, userID string) error {
+func (r *PostgresURLRepository) DeleteURLs(url string, userID string, DataBase string) error {
+	// Создание конфигурации пула подключений
+	config, err := pgxpool.ParseConfig(DataBase)
+	if err != nil {
+		fmt.Printf(err.Error())
+	}
+
+	// Создание пула подключений
+	pool, err := pgxpool.ConnectConfig(context.Background(), config)
+	if err != nil {
+		fmt.Printf(err.Error())
+	}
+
+	// Использование пула подключений для выполнения запросов
+	conn, err := pool.Acquire(context.Background())
+	if err != nil {
+		fmt.Printf(err.Error())
+	}
+	defer conn.Release()
+
 	query := `
 		UPDATE user_urls
 		SET delFLAG = true
@@ -219,7 +239,7 @@ func (r *PostgresURLRepository) DeleteURLs(url string, userID string) error {
 	`
 
 	// Выполняем запрос на множественное обновление
-	_, err := r.db.Exec(context.Background(), query, userID, url)
+	_, err = conn.Exec(context.Background(), query, userID, url)
 	if err != nil {
 		fmt.Printf(err.Error())
 		return err
