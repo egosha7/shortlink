@@ -24,7 +24,7 @@ func Default() *Config {
 		Addr:     "localhost:8080",
 		BaseURL:  "http://localhost:8080",
 		FilePath: "",
-		DataBase: "postgres://postgres:egosha@localhost:5432/shortlink", // postgres://postgres:egosha@localhost:5432/shortlink
+		DataBase: "", // postgres://postgres:egosha@localhost:5432/shortlink
 	}
 }
 
