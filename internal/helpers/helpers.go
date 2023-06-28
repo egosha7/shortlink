@@ -1,16 +1,16 @@
 package helpers
 
 import (
+	"encoding/base64"
 	"math/rand"
 )
 
 func GenerateID(n int) string {
 	// генерация случайного идентификатора
-	runestring := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" // abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
-	var letterRunes = []rune(runestring)
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	if err != nil {
+		return ""
 	}
-	return string(b)
+	return base64.URLEncoding.EncodeToString(b)[:n]
 }
