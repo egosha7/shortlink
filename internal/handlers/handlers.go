@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/egosha7/shortlink/internal/helpers"
@@ -13,8 +14,73 @@ import (
 
 type Key string
 
+type ContextKey string
+
+const UserIDKey ContextKey = "userID"
+
+func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
+	// Получение идентификатора пользователя из куки
+	userID := GetCookieHandler(w, r)
+
+	setCookieHeader := w.Header().Get("Set-Cookie")
+	if setCookieHeader != "" {
+		fmt.Println("Cookie set in the response:", setCookieHeader)
+		userID = r.Context().Value(UserIDKey).(string)
+		newCtx := context.WithValue(r.Context(), UserIDKey, nil)
+		r = r.WithContext(newCtx)
+	} else {
+		if userID == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+	}
+
+	_, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Получение сокращенных URL пользователя из хранилища
+	urls := store.GetURLsByUserID(userID)
+
+	if len(urls) == 0 {
+		// Если нет сокращенных URL пользователя, возвращаем статус 204 No Content
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	// Формируем ответ в формате JSON
+	var response []map[string]string
+	for _, u := range urls {
+		response = append(
+			response, map[string]string{
+				"short_url":    BaseURL + "/" + u.ID,
+				"original_url": u.URL,
+			},
+		)
+	}
+
+	fmt.Println(response)
+
+	// Отправка ответа в формате JSON
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+
+}
+
 func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
 	id := helpers.GenerateID(6)
+
+	userID := GetCookieHandler(w, r)
+
+	setCookieHeader := w.Header().Get("Set-Cookie")
+	if setCookieHeader != "" {
+		fmt.Println("Cookie set in the response:", setCookieHeader)
+		userID = r.Context().Value(UserIDKey).(string)
+		newCtx := context.WithValue(r.Context(), UserIDKey, nil)
+		r = r.WithContext(newCtx)
+	}
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -22,9 +88,11 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 		return
 	}
 
+	fmt.Println(string(body))
+
 	var existingID string
 	var switchBool bool
-	existingID, switchBool = store.AddURL(id, string(body))
+	existingID, switchBool = store.AddURL(id, string(body), userID)
 	if existingID != "" && !switchBool {
 		existingID = strings.TrimRight(existingID, "\n")
 		shortURLout := fmt.Sprintf("%s/%s", BaseURL, existingID)
@@ -56,12 +124,14 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, st
 		return "", fmt.Errorf("failed to decode request body: %w", err)
 	}
 
+	userID := GetCookieHandler(w, r)
+
 	// Используем тело запроса
 	id := helpers.GenerateID(6)
 
 	var existingID string
 	var switchBool bool
-	existingID, switchBool = store.AddURL(id, req.URL)
+	existingID, switchBool = store.AddURL(id, req.URL, userID)
 	if existingID != "" && !switchBool {
 		fmt.Println("По этому адресу уже зарегистрирован другой адрес:", existingID)
 
@@ -110,13 +180,14 @@ func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
-	w.Header().Set("Location", url)
-	w.WriteHeader(http.StatusTemporaryRedirect)
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
 func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
 
 	ctx := r.Context()
+
+	userID := GetCookieHandler(w, r)
 
 	var records []map[string]string
 	err := json.NewDecoder(r.Body).Decode(&records)
@@ -131,7 +202,7 @@ func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, 
 		return
 	}
 
-	res, _ := store.AddURLwithTx(records, ctx, BaseURL)
+	res, _ := store.AddURLwithTx(records, ctx, BaseURL, userID)
 	if res == nil {
 		http.Error(w, "StatusBadRequest", http.StatusBadRequest)
 		return

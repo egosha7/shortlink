@@ -25,8 +25,9 @@ type URLStore struct {
 }
 
 type URL struct {
-	ID  string
-	URL string
+	ID     string
+	URL    string
+	UserID string
 }
 
 func NewURLStore(filePath string, DBstring string, db *pgx.Conn, logger *zap.Logger) *URLStore {
@@ -39,10 +40,10 @@ func NewURLStore(filePath string, DBstring string, db *pgx.Conn, logger *zap.Log
 	}
 }
 
-func (s *URLStore) AddURL(id, url string) (string, bool) {
+func (s *URLStore) AddURL(id, url, userID string) (string, bool) {
 	if s.DBstring != "" {
 		repo := NewPostgresURLRepository(s.db, s.logger)
-		return repo.AddURL(id, url)
+		return repo.AddURL(id, url, userID)
 	}
 
 	s.mu.Lock()
@@ -53,7 +54,7 @@ func (s *URLStore) AddURL(id, url string) (string, bool) {
 		if u.ID == id {
 			// ID уже существует в хранилище, генерируем новый
 			newID := helpers.GenerateID(6)
-			return s.AddURL(newID, url)
+			return s.AddURL(newID, url, userID)
 		}
 	}
 
@@ -65,7 +66,7 @@ func (s *URLStore) AddURL(id, url string) (string, bool) {
 		}
 	}
 
-	newURL := URL{ID: id, URL: url}
+	newURL := URL{ID: id, URL: url, UserID: userID}
 	s.urls = append(s.urls, newURL)
 
 	// Сохранение данных в файл
@@ -77,10 +78,10 @@ func (s *URLStore) AddURL(id, url string) (string, bool) {
 	return id, true
 }
 
-func (s *URLStore) AddURLwithTx(records []map[string]string, ctx context.Context, BaseURL string) ([]map[string]string, bool) {
+func (s *URLStore) AddURLwithTx(records []map[string]string, ctx context.Context, BaseURL string, userID string) ([]map[string]string, bool) {
 	if s.DBstring != "" {
 		repo := NewPostgresURLRepository(s.db, s.logger)
-		return repo.AddURLwithTx(records, ctx, s.DBstring, BaseURL)
+		return repo.AddURLwithTx(records, ctx, s.DBstring, BaseURL, userID)
 	}
 	s.logger.Error("Database string no exist")
 	return nil, false
@@ -100,6 +101,25 @@ func (s *URLStore) GetURL(id string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func (s *URLStore) GetURLsByUserID(userID string) []URL {
+	if s.DBstring != "" {
+		repo := NewPostgresURLRepository(s.db, s.logger)
+		return repo.GetURLsByUserID(userID)
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	userURLs := make([]URL, 0)
+
+	for _, u := range s.urls {
+		if u.UserID == userID {
+			userURLs = append(userURLs, u)
+		}
+	}
+
+	return userURLs
 }
 
 func (s *URLStore) LoadFromFile() error {
@@ -182,11 +202,11 @@ func NewPostgresURLRepository(db *pgx.Conn, logger *zap.Logger) *PostgresURLRepo
 	}
 }
 
-func (r *PostgresURLRepository) AddURL(id string, url string) (string, bool) {
-	return r.addURLWithRetry(id, url, 10)
+func (r *PostgresURLRepository) AddURL(id string, url string, userID string) (string, bool) {
+	return r.addURLWithRetry(id, url, userID, 10)
 }
 
-func (r *PostgresURLRepository) addURLWithRetry(id string, url string, attempts int) (string, bool) {
+func (r *PostgresURLRepository) addURLWithRetry(id string, url string, userID string, attempts int) (string, bool) {
 	query := "INSERT INTO urls (id, url) VALUES ($1, $2)"
 	_, err := r.db.Exec(context.Background(), query, id, url)
 	if err != nil {
@@ -197,7 +217,7 @@ func (r *PostgresURLRepository) addURLWithRetry(id string, url string, attempts 
 				// ID уже существует в базе данных, генерируем новый
 				if attempts > 0 {
 					newID := helpers.GenerateID(6)
-					return r.addURLWithRetry(newID, url, attempts-1)
+					return r.addURLWithRetry(newID, url, userID, attempts-1)
 				} else {
 					r.logger.Warn("Exceeded maximum retry attempts")
 				}
@@ -217,10 +237,19 @@ func (r *PostgresURLRepository) addURLWithRetry(id string, url string, attempts 
 		}
 		return "", false
 	}
+
+	// Добавляем данные в таблицу user_urls
+	userQuery := "INSERT INTO user_urls (idshorturl, userid) VALUES ($1, $2)"
+	_, userErr := r.db.Exec(context.Background(), userQuery, id, userID)
+	if userErr != nil {
+		r.logger.Error("Failed to add user URL", zap.Error(userErr))
+		return "", false
+	}
+
 	return id, true
 }
 
-func (r *PostgresURLRepository) AddURLwithTx(records []map[string]string, ctx context.Context, DBString string, BaseURL string) ([]map[string]string, bool) {
+func (r *PostgresURLRepository) AddURLwithTx(records []map[string]string, ctx context.Context, DBString string, BaseURL string, userID string) ([]map[string]string, bool) {
 
 	conn, err := sql.Open("pgx", DBString)
 	if err != nil {
@@ -247,6 +276,13 @@ func (r *PostgresURLRepository) AddURLwithTx(records []map[string]string, ctx co
 			r.logger.Error("Error Exec", zap.Error(err))
 			return nil, false
 		}
+
+		_, err = tx.Exec("INSERT INTO user_urls (idshorturl, userid) VALUES ($1, $2)", correlationID, userID)
+		if err != nil {
+			r.logger.Error("Error Exec", zap.Error(err))
+			return nil, false
+		}
+
 		shortURL := fmt.Sprintf("%s/%s", BaseURL, correlationID)
 
 		// Добавляем результат в ответ
@@ -294,6 +330,39 @@ func (r *PostgresURLRepository) GetURLByID(id string) (string, bool) {
 	return url, true
 }
 
+func (r *PostgresURLRepository) GetURLsByUserID(userID string) []URL {
+	var userURLs []URL
+	query := `
+        SELECT u.URL, uu.IDshortURL
+        FROM urls u
+        JOIN user_urls uu ON u.ID = uu.IDshortURL
+        WHERE uu.userID = $1
+    `
+	rows, err := r.db.Query(context.Background(), query, userID)
+	if err != nil {
+		r.logger.Error("Failed to get URLs by UserID", zap.Error(err))
+		return nil
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var url, shortURL string
+		err := rows.Scan(&url, &shortURL)
+		if err != nil {
+			r.logger.Error("Failed to scan URL and ShortURL", zap.Error(err))
+			return nil
+		}
+		userURLs = append(userURLs, URL{ID: shortURL, URL: url, UserID: userID})
+	}
+
+	if err := rows.Err(); err != nil {
+		r.logger.Error("Error occurred while iterating over rows", zap.Error(err))
+		return nil
+	}
+
+	return userURLs
+}
+
 func (r *PostgresURLRepository) PrintAllURLs() {
 	rows, err := r.db.Query(context.Background(), "SELECT id, url FROM urls")
 	if err != nil {
@@ -329,6 +398,31 @@ func (r *PostgresURLRepository) CreateTable() error {
 			URL TEXT,
 			UNIQUE (URL)
 		)
+	`,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.db.Exec(
+		context.Background(), `
+		CREATE TABLE IF NOT EXISTS user_urls (
+			ID SERIAL PRIMARY KEY,
+			IDshortURL TEXT,
+			userID TEXT
+		)
+	`,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.db.Exec(
+		context.Background(), `
+		ALTER TABLE name
+		ADD CONSTRAINT fk_name_IDshortURL
+		FOREIGN KEY (IDshortURL) REFERENCES urls (ID);
+
 	`,
 	)
 	if err != nil {

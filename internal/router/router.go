@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/egosha7/shortlink/internal/cookiemw"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
@@ -38,7 +39,15 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 	// Создание группы роутера
 	r.Group(
 		func(route chi.Router) {
+			route.Use(cookiemw.CookieMiddleware)
 			route.Use(gzipMiddleware.Apply)
+
+			route.Get(
+				"/cookie/set", func(w http.ResponseWriter, r *http.Request) {
+					handlers.SetCookieHandler(w, r)
+				},
+			)
+
 			route.Get(
 				"/{id}", func(w http.ResponseWriter, r *http.Request) {
 					handlers.RedirectURL(w, r, store)
@@ -48,6 +57,12 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 			route.Get(
 				"/ping", func(w http.ResponseWriter, r *http.Request) {
 					db.PingDB(w, r, conn)
+				},
+			)
+
+			route.Get(
+				"/api/user/urls", func(w http.ResponseWriter, r *http.Request) {
+					handlers.GetUserURLsHandler(w, r, cfg.BaseURL, store)
 				},
 			)
 
