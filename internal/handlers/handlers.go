@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/egosha7/shortlink/internal/cookiemw"
 	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/egosha7/shortlink/internal/storage"
 	"github.com/go-chi/chi"
@@ -15,7 +14,9 @@ import (
 
 type Key string
 
-type ContextKey string
+type contextKey string
+
+const UserIDKey = contextKey("userID")
 
 func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
 	// Получение идентификатора пользователя из куки
@@ -25,7 +26,7 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
 		userID = r.Context().Value("userID").(string)
-		newCtx := context.WithValue(r.Context(), cookiemw.UserIDKey, nil)
+		newCtx := context.WithValue(r.Context(), UserIDKey, nil)
 		r = r.WithContext(newCtx)
 	} else {
 		if userID == "" {
@@ -77,7 +78,7 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
 		userID = r.Context().Value("userID").(string)
-		newCtx := context.WithValue(r.Context(), cookiemw.UserIDKey, nil)
+		newCtx := context.WithValue(r.Context(), UserIDKey, nil)
 		r = r.WithContext(newCtx)
 	}
 
