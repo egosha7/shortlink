@@ -53,7 +53,7 @@ func (s *URLStore) DeleteURLs(url string, userID string) error {
 func (s *URLStore) AddURL(id, url, userID string) (string, bool) {
 	if s.DBstring != "" {
 		repo := NewPostgresURLRepository(s.db, s.logger)
-		return repo.AddURL(id, url, userID)
+		return repo.AddURL(id, url, userID, s.DBstring)
 	}
 
 	s.mu.Lock()
@@ -247,13 +247,32 @@ func (r *PostgresURLRepository) DeleteURLs(url string, userID string, DataBase s
 	return nil
 }
 
-func (r *PostgresURLRepository) AddURL(id string, url string, userID string) (string, bool) {
-	return r.addURLWithRetry(id, url, userID, 10)
+func (r *PostgresURLRepository) AddURL(id string, url string, userID string, DataBase string) (string, bool) {
+	return r.addURLWithRetry(id, url, userID, 10, DataBase)
 }
 
-func (r *PostgresURLRepository) addURLWithRetry(id string, url string, userID string, attempts int) (string, bool) {
+func (r *PostgresURLRepository) addURLWithRetry(id string, url string, userID string, attempts int, DataBase string) (string, bool) {
+	// Создание конфигурации пула подключений
+	config, err := pgxpool.ParseConfig(DataBase)
+	if err != nil {
+		fmt.Printf(err.Error())
+	}
+
+	// Создание пула подключений
+	pool, err := pgxpool.ConnectConfig(context.Background(), config)
+	if err != nil {
+		fmt.Printf(err.Error())
+	}
+
+	// Использование пула подключений для выполнения запросов
+	conn, err := pool.Acquire(context.Background())
+	if err != nil {
+		fmt.Printf(err.Error())
+	}
+	defer conn.Release()
+
 	query := "INSERT INTO urls (id, url) VALUES ($1, $2)"
-	_, err := r.db.Exec(context.Background(), query, id, url)
+	_, err = conn.Exec(context.Background(), query, id, url)
 	if err != nil {
 		pgErr, ok := err.(*pgconn.PgError)
 		if ok && pgErr.Code == pgerrcode.UniqueViolation {
@@ -262,7 +281,7 @@ func (r *PostgresURLRepository) addURLWithRetry(id string, url string, userID st
 				// ID уже существует в базе данных, генерируем новый
 				if attempts > 0 {
 					newID := helpers.GenerateID(6)
-					return r.addURLWithRetry(newID, url, userID, attempts-1)
+					return r.addURLWithRetry(newID, url, userID, attempts-1, DataBase)
 				} else {
 					r.logger.Warn("Exceeded maximum retry attempts")
 				}
@@ -285,7 +304,7 @@ func (r *PostgresURLRepository) addURLWithRetry(id string, url string, userID st
 
 	// Добавляем данные в таблицу user_urls
 	userQuery := "INSERT INTO user_urls (idshorturl, userid) VALUES ($1, $2)"
-	_, userErr := r.db.Exec(context.Background(), userQuery, id, userID)
+	_, userErr := conn.Exec(context.Background(), userQuery, id, userID)
 	if userErr != nil {
 		r.logger.Error("Failed to add user URL", zap.Error(userErr))
 		return "", false
