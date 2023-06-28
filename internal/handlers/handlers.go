@@ -78,7 +78,7 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 		return
 	}
 
-	fmt.Println(body)
+	fmt.Println(string(body))
 
 	var existingID string
 	var switchBool bool
