@@ -1,4 +1,4 @@
-package cookieMW
+package cookiemw
 
 import (
 	"context"
@@ -6,23 +6,19 @@ import (
 	"net/http"
 )
 
-type UserData struct {
-	UserID string
-}
+type contextKey string
+
+const UserIDKey = contextKey("userID")
 
 func CookieMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 
-			var userData UserData
-			// Получаем значение куки
-
 			cookie, err := r.Cookie(handlers.CookieName)
 			if err != nil || cookie == nil {
 				// Кука не существует
 				id := handlers.SetCookieHandler(w, r)
-				userData.UserID = id
-				ctx := context.WithValue(r.Context(), "userID", id)
+				ctx := context.WithValue(r.Context(), UserIDKey, id)
 				r = r.WithContext(ctx)
 			}
 
