@@ -83,6 +83,7 @@ func SetCookieHandler(w http.ResponseWriter, r *http.Request) string {
 
 	// Генерируем уникальный идентификатор пользователя
 	userID := helpers.GenerateID(10)
+	userID = helpers.GenerateID(10)
 
 	// Получаем секретный ключ для подписи
 	secretKey := []byte("your-secret-key")
