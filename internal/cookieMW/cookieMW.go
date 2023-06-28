@@ -10,8 +10,9 @@ func CookieMiddleware(next http.Handler) http.Handler {
 		func(w http.ResponseWriter, r *http.Request) {
 			// Получаем значение куки
 
-			_, err := r.Cookie(handlers.CookieName)
-			if err != nil {
+			cookie, err := r.Cookie(handlers.CookieName)
+			if err != nil || cookie == nil {
+				// Кука не существует
 				handlers.SetCookieHandler(w, r)
 			}
 
