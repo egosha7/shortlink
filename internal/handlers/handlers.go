@@ -17,14 +17,14 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	// Получение идентификатора пользователя из куки
 	userID := GetCookieHandler(w, r)
 
-	// Проверяем, установлена ли кука в готовом ответе
-	cookie, err := r.Cookie(CookieName)
-	if err != nil || cookie == nil {
-		// Кука не установлена, выполните необходимые действия
-		fmt.Println("Cookie not set in the response")
-	} else if userID == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
+	setCookieHeader := w.Header().Get("Set-Cookie")
+	if setCookieHeader != "" {
+		fmt.Println("Cookie set in the response:", setCookieHeader)
+	} else {
+		if userID == "" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 	}
 
 	// Получение сокращенных URL пользователя из хранилища
@@ -47,9 +47,12 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 		)
 	}
 
+	fmt.Println(response)
+
 	// Отправка ответа в формате JSON
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+
 }
 
 func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
