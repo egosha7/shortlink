@@ -35,6 +35,12 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 		}
 	}
 
+	_, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Получение сокращенных URL пользователя из хранилища
 	urls := store.GetURLsByUserID(userID)
 
