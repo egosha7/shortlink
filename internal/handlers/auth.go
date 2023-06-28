@@ -9,7 +9,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-const CookieName = "SERIs353xx1x"
+const CookieName = "ucbruvcrrb"
 
 // Функция для генерации симметрично подписанной куки с помощью JWT
 func SetSignedCookie(w http.ResponseWriter, userID string, secretKey []byte, expiration time.Duration) {
@@ -78,7 +78,7 @@ func VerifySignedCookie(r *http.Request, secretKey []byte) (string, error) {
 	return "", fmt.Errorf("Invalid cookie")
 }
 
-func SetCookieHandler(w http.ResponseWriter, r *http.Request) {
+func SetCookieHandler(w http.ResponseWriter, r *http.Request) string {
 
 	// Генерируем уникальный идентификатор пользователя
 	userID := helpers.GenerateID(10)
@@ -91,6 +91,7 @@ func SetCookieHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Отправляем ответ
 	fmt.Println("Cookie set successfully: userID", userID)
+	return userID
 }
 
 func GetCookieHandler(w http.ResponseWriter, r *http.Request) string {

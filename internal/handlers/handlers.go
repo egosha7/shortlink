@@ -20,6 +20,7 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	setCookieHeader := w.Header().Get("Set-Cookie")
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
+		userID = r.Context().Value("userID").(string)
 	} else {
 		if userID == "" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
