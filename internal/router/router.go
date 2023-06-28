@@ -2,7 +2,6 @@ package routes
 
 import (
 	"context"
-	"fmt"
 	"github.com/egosha7/shortlink/internal/cookiemw"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"go.uber.org/zap"
@@ -21,13 +20,13 @@ import (
 func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Handler {
 	config, err := pgxpool.ParseConfig(cfg.DataBase)
 	if err != nil {
-		fmt.Printf(err.Error())
+		logger.Error("Error parse config", zap.Error(err))
 	}
 	config.MaxConns = 1000
 	// Создание пула подключений
 	pool, err := pgxpool.ConnectConfig(context.Background(), config)
 	if err != nil {
-		fmt.Printf(err.Error())
+		logger.Error("Error connect config", zap.Error(err))
 	}
 	// Создание хранилища
 	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn, logger, pool)

@@ -220,7 +220,7 @@ func (r *PostgresURLRepository) DeleteURLs(url string, userID string) error {
 	// Использование пула подключений для выполнения запросов
 	conn, err := r.pool.Acquire(context.Background())
 	if err != nil {
-		fmt.Printf(err.Error())
+		r.logger.Error("Error open connection", zap.Error(err))
 	}
 	defer conn.Release()
 
@@ -233,7 +233,7 @@ func (r *PostgresURLRepository) DeleteURLs(url string, userID string) error {
 	// Выполняем запрос на множественное обновление
 	_, err = conn.Exec(context.Background(), query, userID, url)
 	if err != nil {
-		fmt.Printf(err.Error())
+		r.logger.Error("Error request to DB", zap.Error(err))
 		conn.Release()
 		return err
 	}
@@ -250,7 +250,7 @@ func (r *PostgresURLRepository) addURLWithRetry(id string, url string, userID st
 	// Использование пула подключений для выполнения запросов
 	conn, err := r.pool.Acquire(context.Background())
 	if err != nil {
-		fmt.Printf(err.Error())
+		r.logger.Error("Error open connection", zap.Error(err))
 		return "", false
 	}
 	defer conn.Release()
@@ -370,7 +370,7 @@ func (r *PostgresURLRepository) GetURLByID(id string, DataBase string) (string, 
 	// Использование пула подключений для выполнения запросов
 	conn, err := r.pool.Acquire(context.Background())
 	if err != nil {
-		fmt.Printf(err.Error())
+		r.logger.Error("Error open connection", zap.Error(err))
 	}
 	defer conn.Release()
 
