@@ -26,7 +26,7 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
 		userID = r.Context().Value("userID").(string)
-		newCtx := context.WithValue(r.Context(), UserIDKey, nil)
+		newCtx := context.WithValue(r.Context(), UserIDKey, "")
 		r = r.WithContext(newCtx)
 	} else {
 		if userID == "" {
@@ -78,7 +78,7 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
 		userID = r.Context().Value("userID").(string)
-		newCtx := context.WithValue(r.Context(), UserIDKey, nil)
+		newCtx := context.WithValue(r.Context(), UserIDKey, "")
 		r = r.WithContext(newCtx)
 	}
 
