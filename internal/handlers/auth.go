@@ -38,6 +38,7 @@ func SetSignedCookie(w http.ResponseWriter, userID string, secretKey []byte, exp
 		Expires:  expirationTime,
 		HttpOnly: true,
 	}
+	fmt.Println("Cookie REQUEST: userID", tokenString)
 
 	// Устанавливаем куку в ответе
 	http.SetCookie(w, &cookie)
