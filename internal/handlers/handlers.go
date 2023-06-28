@@ -14,6 +14,51 @@ import (
 
 type Key string
 
+func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
+	userID := GetCookieHandler(w, r)
+	setCookieHeader := w.Header().Get("Set-Cookie")
+	if setCookieHeader != "" {
+		fmt.Println("Cookie set in the response:", setCookieHeader)
+		userID = r.Context().Value(UserIDKey).(string)
+		newCtx := context.WithValue(r.Context(), UserIDKey, nil)
+		r = r.WithContext(newCtx)
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var urls []string
+	err = json.Unmarshal(body, &urls)
+	if err != nil {
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	// Создаем канал для передачи ссылок на удаление
+	urlsChan := make(chan string)
+
+	// Создаем горутину для асинхронного удаления ссылок
+	go func() {
+		for url := range urlsChan {
+			store.DeleteURLs(url, userID)
+		}
+	}()
+
+	// Отправляем ссылки на удаление в канал
+	for _, url := range urls {
+		urlsChan <- url
+	}
+
+	// Закрываем канал после передачи всех ссылок
+	close(urlsChan)
+
+	// Возвращаем статус 202 Accepted
+	w.WriteHeader(http.StatusAccepted)
+}
+
 type ContextKey string
 
 const UserIDKey ContextKey = "userID"
@@ -176,10 +221,14 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, st
 func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
 	id := chi.URLParam(r, "id")
 	url, ok := store.GetURL(id)
-	if !ok {
+	if url == "" && !ok {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
+	} else if !ok {
+		w.WriteHeader(http.StatusGone)
+		return
 	}
+
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 

@@ -42,6 +42,12 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 			route.Use(cookiemw.CookieMiddleware)
 			route.Use(gzipMiddleware.Apply)
 
+			route.Delete(
+				"/api/user/urls", func(w http.ResponseWriter, r *http.Request) {
+					handlers.DeleteUserURLsHandler(w, r, store)
+				},
+			)
+
 			route.Get(
 				"/cookie/set", func(w http.ResponseWriter, r *http.Request) {
 					handlers.SetCookieHandler(w, r)

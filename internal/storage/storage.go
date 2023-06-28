@@ -40,6 +40,15 @@ func NewURLStore(filePath string, DBstring string, db *pgx.Conn, logger *zap.Log
 	}
 }
 
+func (s *URLStore) DeleteURLs(url string, userID string) error {
+	if s.DBstring != "" {
+		repo := NewPostgresURLRepository(s.db, s.logger)
+		return repo.DeleteURLs(url, userID)
+	}
+	s.logger.Error("Database string no exist")
+	return nil
+}
+
 func (s *URLStore) AddURL(id, url, userID string) (string, bool) {
 	if s.DBstring != "" {
 		repo := NewPostgresURLRepository(s.db, s.logger)
@@ -202,6 +211,22 @@ func NewPostgresURLRepository(db *pgx.Conn, logger *zap.Logger) *PostgresURLRepo
 	}
 }
 
+func (r *PostgresURLRepository) DeleteURLs(url string, userID string) error {
+	query := `
+		UPDATE user_urls
+		SET delFLAG = true
+		WHERE userID = $1 AND IDshortURL = $2
+	`
+
+	// Выполняем запрос на множественное обновление
+	_, err := r.db.Exec(context.Background(), query, userID, url)
+	if err != nil {
+		fmt.Printf(err.Error())
+		return err
+	}
+	return nil
+}
+
 func (r *PostgresURLRepository) AddURL(id string, url string, userID string) (string, bool) {
 	return r.addURLWithRetry(id, url, userID, 10)
 }
@@ -327,6 +352,22 @@ func (r *PostgresURLRepository) GetURLByID(id string) (string, bool) {
 		r.logger.Error("Failed to get URL by ID", zap.Error(err))
 		return "", false
 	}
+
+	var delFlag bool
+	query = "SELECT delFLAG FROM user_urls WHERE IDshortURL = $1"
+	err = r.db.QueryRow(context.Background(), query, id).Scan(&delFlag)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", false
+		}
+		r.logger.Error("Failed to get delFLAG by IDshortURL", zap.Error(err))
+		return "", false
+	}
+
+	if delFlag {
+		return url, false
+	}
+
 	return url, true
 }
 
@@ -409,7 +450,8 @@ func (r *PostgresURLRepository) CreateTable() error {
 		CREATE TABLE IF NOT EXISTS user_urls (
 			ID SERIAL PRIMARY KEY,
 			IDshortURL TEXT,
-			userID TEXT
+			userID TEXT,
+			delFLAG BOOL DEFAULT false
 		)
 	`,
 	)
@@ -419,7 +461,7 @@ func (r *PostgresURLRepository) CreateTable() error {
 
 	_, err = r.db.Exec(
 		context.Background(), `
-		ALTER TABLE name
+		ALTER TABLE user_urls
 		ADD CONSTRAINT fk_name_IDshortURL
 		FOREIGN KEY (IDshortURL) REFERENCES urls (ID);
 
