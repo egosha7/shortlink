@@ -78,6 +78,8 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 		return
 	}
 
+	fmt.Println(body)
+
 	var existingID string
 	var switchBool bool
 	existingID, switchBool = store.AddURL(id, string(body), userID)
