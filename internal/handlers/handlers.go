@@ -14,9 +14,9 @@ import (
 
 type Key string
 
-type contextKey string
+type ContextKey string
 
-const UserIDKey = contextKey("userID")
+const UserIDKey ContextKey = "userID"
 
 func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
 	// Получение идентификатора пользователя из куки
@@ -26,19 +26,13 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
 		userID = r.Context().Value("userID").(string)
-		newCtx := context.WithValue(r.Context(), UserIDKey, "")
+		newCtx := context.WithValue(r.Context(), UserIDKey, nil)
 		r = r.WithContext(newCtx)
 	} else {
 		if userID == "" {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-	}
-
-	_, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
 	}
 
 	// Получение сокращенных URL пользователя из хранилища
@@ -78,7 +72,7 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
 		userID = r.Context().Value("userID").(string)
-		newCtx := context.WithValue(r.Context(), UserIDKey, "")
+		newCtx := context.WithValue(r.Context(), UserIDKey, nil)
 		r = r.WithContext(newCtx)
 	}
 
