@@ -17,8 +17,12 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	// Получение идентификатора пользователя из куки
 	userID := GetCookieHandler(w, r)
 
-	_, err := r.Cookie(CookieName)
-	if err != nil {
+	// Проверяем, установлена ли кука в готовом ответе
+	cookie, err := r.Cookie(CookieName)
+	if err != nil || cookie == nil {
+		// Кука не установлена, выполните необходимые действия
+		fmt.Println("Cookie not set in the response")
+	} else if userID == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}

@@ -1,7 +1,5 @@
-POST http://localhost:8080
-Content-Type: text/plain
+GET http://localhost:8080/api/user/urls
 
-https://music.mts.ru
 
 
 

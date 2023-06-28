@@ -9,7 +9,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-const CookieName = "USER_I123D"
+const CookieName = "USER_I123Dx"
 
 // Функция для генерации симметрично подписанной куки с помощью JWT
 func SetSignedCookie(w http.ResponseWriter, userID string, secretKey []byte, expiration time.Duration) {
