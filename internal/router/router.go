@@ -1,7 +1,10 @@
 package routes
 
 import (
+	"context"
+	"fmt"
 	"github.com/egosha7/shortlink/internal/cookiemw"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
@@ -16,16 +19,26 @@ import (
 )
 
 func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Handler {
-
+	config, err := pgxpool.ParseConfig(cfg.DataBase)
+	if err != nil {
+		fmt.Printf(err.Error())
+	}
+	config.MaxConns = 1000
+	// Создание пула подключений
+	pool, err := pgxpool.ConnectConfig(context.Background(), config)
+	if err != nil {
+		fmt.Printf(err.Error())
+	}
 	// Создание хранилища
-	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn, logger)
-	repo := storage.NewPostgresURLRepository(conn, logger, cfg.DataBase)
+	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn, logger, pool)
+	repo := storage.NewPostgresURLRepository(conn, logger, pool)
+
 	if cfg.DataBase != "" {
 		repo.CreateTable()
 	}
 
 	// Загрузка данных из файла
-	err := store.LoadFromFile()
+	err = store.LoadFromFile()
 	if err != nil {
 		logger.Error("Error loading data from file", zap.Error(err)) // Используем логер для вывода ошибки
 		os.Exit(1)

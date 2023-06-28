@@ -14,13 +14,17 @@ import (
 
 type Key string
 
+type ContextKey string
+
+const UserIDKey ContextKey = "userID"
+
 func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
 	userID := GetCookieHandler(w, r)
 	setCookieHeader := w.Header().Get("Set-Cookie")
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
 		userID = r.Context().Value(UserIDKey).(string)
-		newCtx := context.WithValue(r.Context(), UserIDKey, nil)
+		newCtx := context.WithValue(r.Context(), UserIDKey, "")
 		r = r.WithContext(newCtx)
 	}
 
@@ -59,10 +63,6 @@ func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storag
 	w.WriteHeader(http.StatusAccepted)
 }
 
-type ContextKey string
-
-const UserIDKey ContextKey = "userID"
-
 func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
 	// Получение идентификатора пользователя из куки
 	userID := GetCookieHandler(w, r)
@@ -71,7 +71,7 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
 		userID = r.Context().Value(UserIDKey).(string)
-		newCtx := context.WithValue(r.Context(), UserIDKey, nil)
+		newCtx := context.WithValue(r.Context(), UserIDKey, "")
 		r = r.WithContext(newCtx)
 	} else {
 		if userID == "" {
@@ -123,7 +123,7 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
 		userID = r.Context().Value(UserIDKey).(string)
-		newCtx := context.WithValue(r.Context(), UserIDKey, nil)
+		newCtx := context.WithValue(r.Context(), UserIDKey, "")
 		r = r.WithContext(newCtx)
 	}
 
