@@ -100,7 +100,7 @@ func (s *URLStore) AddURLwithTx(records []map[string]string, ctx context.Context
 func (s *URLStore) GetURL(id string) (string, bool) {
 	if s.DBstring != "" {
 		repo := NewPostgresURLRepository(s.db, s.logger)
-		return repo.GetURLByID(id)
+		return repo.GetURLByID(id, s.DBstring)
 	}
 
 	s.mu.RLock()
@@ -380,10 +380,28 @@ func (r *PostgresURLRepository) GetIDByURL(url string) (string, bool) {
 	return id, true
 }
 
-func (r *PostgresURLRepository) GetURLByID(id string) (string, bool) {
+func (r *PostgresURLRepository) GetURLByID(id string, DataBase string) (string, bool) {
+	config, err := pgxpool.ParseConfig(DataBase)
+	if err != nil {
+		fmt.Printf(err.Error())
+	}
+
+	// Создание пула подключений
+	pool, err := pgxpool.ConnectConfig(context.Background(), config)
+	if err != nil {
+		fmt.Printf(err.Error())
+	}
+
+	// Использование пула подключений для выполнения запросов
+	conn, err := pool.Acquire(context.Background())
+	if err != nil {
+		fmt.Printf(err.Error())
+	}
+	defer conn.Release()
+
 	var url string
 	query := "SELECT url FROM urls WHERE id = $1"
-	err := r.db.QueryRow(context.Background(), query, id).Scan(&url)
+	err = r.db.QueryRow(context.Background(), query, id).Scan(&url)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return "", false
