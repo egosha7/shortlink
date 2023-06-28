@@ -79,6 +79,10 @@ func VerifySignedCookie(r *http.Request, secretKey []byte) (string, error) {
 }
 
 func SetCookieHandler(w http.ResponseWriter, r *http.Request) {
+	_, err := r.Cookie(CookieName)
+	if err != nil {
+		return
+	}
 	// Генерируем уникальный идентификатор пользователя
 	userID := helpers.GenerateID(10)
 

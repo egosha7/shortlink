@@ -37,7 +37,7 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	for _, u := range urls {
 		response = append(
 			response, map[string]string{
-				"short_url":    BaseURL + u.ID,
+				"short_url":    BaseURL + "/" + u.ID,
 				"original_url": u.URL,
 			},
 		)
