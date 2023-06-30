@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/jackc/pgx/v4/stdlib"
-	"github.com/lib/pq"
 	"go.uber.org/zap"
 	"os"
 	"sync"
@@ -44,13 +43,12 @@ func NewURLStore(filePath string, DBstring string, db *pgx.Conn, logger *zap.Log
 	}
 }
 
-func (s *URLStore) DeleteURLs(urls []string, userID string) error {
+func (s *URLStore) DeleteURLs(urls []string, userID string) {
 	if s.DBstring != "" {
 		repo := NewPostgresURLRepository(s.db, s.logger, s.pool)
-		return repo.DeleteURLs(urls, userID)
+		repo.DeleteURLs(urls, userID)
 	}
 	s.logger.Error("Database string no exist")
-	return nil
 }
 
 func (s *URLStore) AddURL(id, url, userID string) (string, bool) {
@@ -217,35 +215,31 @@ func NewPostgresURLRepository(db *pgx.Conn, logger *zap.Logger, pool *pgxpool.Po
 	}
 }
 
-func (r *PostgresURLRepository) DeleteURLs(urls []string, userID string) error {
-	// Использование пула подключений для выполнения запросов
-	conn, err := r.pool.Acquire(context.Background())
-	if err != nil {
-		r.logger.Error("Error opening connection", zap.Error(err))
-		return err
-	}
-	defer conn.Release()
+func (r *PostgresURLRepository) DeleteURLs(urls []string, userID string) {
+	go func() {
+		// Использование пула подключений для выполнения запросов
+		conn, err := r.pool.Acquire(context.Background())
+		if err != nil {
+			r.logger.Error("Error open connection", zap.Error(err))
+			return
+		}
+		defer conn.Release()
 
-	query := `
-		UPDATE user_urls
-		SET delFLAG = true
-		WHERE userID = $1 AND IDshortURL = ANY($2)
-	`
+		query := `
+			UPDATE user_urls
+			SET delFLAG = true
+			WHERE userID = $1 AND IDshortURL = $2
+		`
 
-	// Преобразуем срез строк в плоский срез интерфейсов для передачи в запрос
-	urlsInterface := make([]interface{}, len(urls))
-	for i, url := range urls {
-		urlsInterface[i] = url
-	}
-
-	// Выполняем запрос на множественное обновление
-	_, err = conn.Exec(context.Background(), query, userID, pq.Array(urlsInterface))
-	if err != nil {
-		r.logger.Error("Error executing DB query", zap.Error(err))
-		return err
-	}
-
-	return nil
+		for _, url := range urls {
+			// Выполняем запрос на удаление в каждой итерации цикла
+			_, err = conn.Exec(context.Background(), query, userID, url)
+			if err != nil {
+				r.logger.Error("Error request to DB", zap.Error(err))
+				continue
+			}
+		}
+	}()
 }
 func (r *PostgresURLRepository) AddURL(id string, url string, userID string) (string, bool) {
 	return r.addURLWithRetry(id, url, userID, 10)
