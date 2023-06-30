@@ -19,6 +19,22 @@ type ContextKey string
 
 const UserIDKey ContextKey = "userID"
 
+type worker struct {
+	store *storage.URLStore
+}
+
+func (w *worker) DeleteUrls(urls []string, userID string) {
+	for _, url := range urls {
+		w.store.DeleteURLs(url, userID)
+	}
+}
+
+func (w *worker) work(urlsChan <-chan []string, userID string) {
+	for urls := range urlsChan {
+		w.DeleteUrls(urls, userID)
+	}
+}
+
 func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
 	userID := GetCookieHandler(w, r)
 	setCookieHeader := w.Header().Get("Set-Cookie")
@@ -43,19 +59,16 @@ func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storag
 	}
 
 	// Создаем канал для передачи ссылок на удаление
-	urlsChan := make(chan string)
+	urlsChan := make(chan []string)
 
-	// Создаем горутину для асинхронного удаления ссылок
-	go func() {
-		for url := range urlsChan {
-			store.DeleteURLs(url, userID)
-		}
-	}()
+	// Создаем воркер
+	wo := &worker{store: store}
+
+	// Запускаем асинхронную работу воркера
+	go wo.work(urlsChan, userID)
 
 	// Отправляем ссылки на удаление в канал
-	for _, url := range urls {
-		urlsChan <- url
-	}
+	urlsChan <- urls
 
 	// Закрываем канал после передачи всех ссылок
 	close(urlsChan)
