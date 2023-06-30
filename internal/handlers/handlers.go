@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/egosha7/shortlink/internal/auth"
 	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/egosha7/shortlink/internal/storage"
 	"github.com/egosha7/shortlink/internal/worker"
@@ -21,7 +22,7 @@ type ContextKey string
 const UserIDKey ContextKey = "userID"
 
 func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, wkr *worker.Worker) {
-	userID := GetCookieHandler(w, r)
+	userID := auth.GetCookieHandler(w, r)
 	setCookieHeader := w.Header().Get("Set-Cookie")
 	if setCookieHeader != "" {
 		fmt.Println("Cookie set in the response:", setCookieHeader)
@@ -52,18 +53,16 @@ func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, wkr *worker.W
 
 func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore, logger *zap.Logger) {
 	// Получение идентификатора пользователя из куки
-	userID := GetCookieHandler(w, r)
+	userID := auth.GetCookieHandler(w, r)
 	setCookieHeader := w.Header().Get("Set-Cookie")
 	if setCookieHeader != "" {
 		logger.Info("Cookie set in the response:" + setCookieHeader)
 		userID = r.Context().Value(UserIDKey).(string)
 		newCtx := context.WithValue(r.Context(), UserIDKey, "")
 		r = r.WithContext(newCtx)
-	} else {
-		if userID == "" {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
+	} else if userID == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
 
 	_, err := io.ReadAll(r.Body)
@@ -101,7 +100,7 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore, logger *zap.Logger) {
 	id := helpers.GenerateID(6)
 
-	userID := GetCookieHandler(w, r)
+	userID := auth.GetCookieHandler(w, r)
 
 	setCookieHeader := w.Header().Get("Set-Cookie")
 	if setCookieHeader != "" {
@@ -154,7 +153,7 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, st
 		return "", fmt.Errorf("failed to decode request body: %w", err)
 	}
 
-	userID := GetCookieHandler(w, r)
+	userID := auth.GetCookieHandler(w, r)
 
 	// Используем тело запроса
 	id := helpers.GenerateID(6)
@@ -221,7 +220,7 @@ func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, 
 
 	ctx := r.Context()
 
-	userID := GetCookieHandler(w, r)
+	userID := auth.GetCookieHandler(w, r)
 
 	var records []map[string]string
 	err := json.NewDecoder(r.Body).Decode(&records)

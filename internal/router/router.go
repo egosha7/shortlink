@@ -2,6 +2,7 @@ package routes
 
 import (
 	"context"
+	"github.com/egosha7/shortlink/internal/auth"
 	"github.com/egosha7/shortlink/internal/cookiemw"
 	"github.com/egosha7/shortlink/internal/worker"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -64,7 +65,7 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 
 			route.Get(
 				"/cookie/set", func(w http.ResponseWriter, r *http.Request) {
-					handlers.SetCookieHandler(w, r)
+					auth.SetCookieHandler(w, r)
 				},
 			)
 
