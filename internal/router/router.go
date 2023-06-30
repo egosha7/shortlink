@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"github.com/egosha7/shortlink/internal/cookiemw"
+	"github.com/egosha7/shortlink/internal/worker"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"go.uber.org/zap"
 	"net/http"
@@ -32,6 +33,12 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn, logger, pool)
 	repo := storage.NewPostgresURLRepository(conn, logger, pool)
 
+	// Создаем воркер
+	worker := worker.NewWorker(store)
+
+	// Запускаем воркер в отдельной горутине
+	go worker.Work()
+
 	if cfg.DataBase != "" {
 		repo.CreateTable()
 	}
@@ -56,7 +63,7 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 
 			route.Delete(
 				"/api/user/urls", func(w http.ResponseWriter, r *http.Request) {
-					handlers.DeleteUserURLsHandler(w, r, store)
+					handlers.DeleteUserURLsHandler(w, r, worker)
 				},
 			)
 
