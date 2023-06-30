@@ -12,14 +12,6 @@ type Worker struct {
 	userID string
 }
 
-// NewWorker создает новый экземпляр воркера
-func NewWorker(store *storage.URLStore) *Worker {
-	return &Worker{
-		worker: make(chan string),
-		store:  store,
-	}
-}
-
 // Метод для добавления ссылки на удаление в канал
 func (w *Worker) DeleteURLs(urls []string, userID string) {
 	for _, url := range urls {
@@ -29,7 +21,7 @@ func (w *Worker) DeleteURLs(urls []string, userID string) {
 }
 
 // Метод для обработки ссылок на удаление
-func (w *Worker) Work() {
+func (w *Worker) work() {
 	for url := range w.worker {
 		// Используйте хранилище для удаления ссылки
 		err := w.store.DeleteURLs(url, w.userID)
