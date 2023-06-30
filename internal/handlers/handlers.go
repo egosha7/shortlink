@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/egosha7/shortlink/internal/storage"
+	"github.com/egosha7/shortlink/internal/worker"
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
 	"io"
@@ -18,22 +19,6 @@ type Key string
 type ContextKey string
 
 const UserIDKey ContextKey = "userID"
-
-type worker struct {
-	store *storage.URLStore
-}
-
-func (w *worker) DeleteUrls(urls []string, userID string) {
-	for _, url := range urls {
-		w.store.DeleteURLs(url, userID)
-	}
-}
-
-func (w *worker) work(urlsChan <-chan []string, userID string) {
-	for urls := range urlsChan {
-		w.DeleteUrls(urls, userID)
-	}
-}
 
 func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
 	userID := GetCookieHandler(w, r)
@@ -58,20 +43,11 @@ func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storag
 		return
 	}
 
-	// Создаем канал для передачи ссылок на удаление
-	urlsChan := make(chan []string)
+	// Создаем экземпляр worker
+	wkr := worker.NewWorker(store)
 
-	// Создаем воркер
-	wo := &worker{store: store}
-
-	// Запускаем асинхронную работу воркера
-	go wo.work(urlsChan, userID)
-
-	// Отправляем ссылки на удаление в канал
-	urlsChan <- urls
-
-	// Закрываем канал после передачи всех ссылок
-	close(urlsChan)
+	// Отправляем ссылки и userID в канал через метод DeleteURLs экземпляра worker
+	wkr.DeleteURLs(urls, userID)
 
 	// Возвращаем статус 202 Accepted
 	w.WriteHeader(http.StatusAccepted)

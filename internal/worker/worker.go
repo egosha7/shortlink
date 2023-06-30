@@ -1,32 +1,42 @@
 package worker
 
-import (
-	"fmt"
-	"github.com/egosha7/shortlink/internal/storage"
-)
+import "github.com/egosha7/shortlink/internal/storage"
 
-// Воркер
-type Worker struct {
-	worker chan string
-	store  *storage.URLStore
+type worker struct {
+	urlsChan chan deleteRequest
+	store    *storage.URLStore
+}
+
+type deleteRequest struct {
+	urls   []string
 	userID string
 }
 
-// Метод для добавления ссылки на удаление в канал
-func (w *Worker) DeleteURLs(urls []string, userID string) {
-	for _, url := range urls {
-		w.worker <- url
+func NewWorker(store *storage.URLStore) *worker {
+	// Инициализация канала
+	urlsChan := make(chan deleteRequest)
+
+	// Запуск горутины для обработки запросов на удаление
+	go processDeleteRequests(urlsChan, store)
+
+	return &worker{
+		urlsChan: urlsChan,
+		store:    store,
 	}
-	w.userID = userID
 }
 
-// Метод для обработки ссылок на удаление
-func (w *Worker) work() {
-	for url := range w.worker {
-		// Используйте хранилище для удаления ссылки
-		err := w.store.DeleteURLs(url, w.userID)
-		if err != nil {
-			fmt.Println("Error deleting URL:", err)
-		}
+func (w *worker) DeleteURLs(urls []string, userID string) {
+	// Создаем deleteRequest и отправляем его в канал
+	req := deleteRequest{
+		urls:   urls,
+		userID: userID,
+	}
+	w.urlsChan <- req
+}
+
+func processDeleteRequests(urlsChan <-chan deleteRequest, store *storage.URLStore) {
+	for req := range urlsChan {
+		// Выполняем операции с ссылками, например, вызываем метод DeleteURLs
+		store.DeleteURLs(req.urls, req.userID)
 	}
 }
