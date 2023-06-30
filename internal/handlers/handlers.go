@@ -20,7 +20,7 @@ type ContextKey string
 
 const UserIDKey ContextKey = "userID"
 
-func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
+func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, wkr *worker.Worker) {
 	userID := GetCookieHandler(w, r)
 	setCookieHeader := w.Header().Get("Set-Cookie")
 	if setCookieHeader != "" {
@@ -42,9 +42,6 @@ func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, store *storag
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
-
-	// Создаем экземпляр worker
-	wkr := worker.NewWorker(store)
 
 	// Отправляем ссылки и userID в канал через метод DeleteURLs экземпляра worker
 	wkr.DeleteURLs(urls, userID)
