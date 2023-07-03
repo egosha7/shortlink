@@ -13,6 +13,8 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"go.uber.org/zap"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -225,20 +227,30 @@ func (r *PostgresURLRepository) DeleteURLs(urls []string, userID string) {
 	defer conn.Release()
 
 	query := `
-			UPDATE user_urls
-			SET delFLAG = true
-			WHERE userID = $1 AND IDshortURL = $2
-		`
+		UPDATE user_urls
+		SET delFLAG = true
+		WHERE userID = $1 AND IDshortURL IN (`
 
-	for _, url := range urls {
-		// Выполняем запрос на удаление в каждой итерации цикла
-		_, err = conn.Exec(context.Background(), query, userID, url)
-		if err != nil {
-			r.logger.Error("Error request to DB", zap.Error(err))
-			continue
-		}
+	// Создаем плейсхолдеры для каждой ссылки
+	placeholders := make([]string, len(urls))
+	params := make([]interface{}, len(urls)+1) // +1 для учета userID в качестве первого параметра
+	params[0] = userID
+
+	for i, url := range urls {
+		placeholders[i] = "$" + strconv.Itoa(i+2) // +2 для учета userID в качестве первого плейсхолдера
+		params[i+1] = url
+	}
+
+	query += strings.Join(placeholders, ", ") + ")"
+
+	// Выполняем запрос на удаление всех ссылок одним запросом
+	_, err = conn.Exec(context.Background(), query, params...)
+	if err != nil {
+		r.logger.Error("Error request to DB", zap.Error(err))
+		return
 	}
 }
+
 func (r *PostgresURLRepository) AddURL(id string, url string, userID string) (string, bool) {
 	return r.addURLWithRetry(id, url, userID, 10)
 }
