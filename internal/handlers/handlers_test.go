@@ -7,6 +7,7 @@ import (
 	"github.com/egosha7/shortlink/internal/loger"
 	"github.com/egosha7/shortlink/internal/storage"
 	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -25,6 +26,7 @@ func TestShortenURL(t *testing.T) {
 		DataBase: "",
 	}
 	conn := &pgx.Conn{}
+	pool := &pgxpool.Pool{}
 
 	logger, err := loger.SetupLogger()
 	if err != nil {
@@ -33,7 +35,7 @@ func TestShortenURL(t *testing.T) {
 	}
 
 	// Указываем экземпляр URLStore
-	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn, logger)
+	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn, logger, pool)
 
 	// Создаем тестовый запрос
 	body := []byte("http://example.com")
@@ -51,7 +53,7 @@ func TestShortenURL(t *testing.T) {
 	// Регистрируем обработчик
 	r.HandleFunc(
 		`/`, func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg.BaseURL, store)
+			handlers.ShortenURL(w, r, cfg.BaseURL, store, logger)
 		},
 	)
 
@@ -84,6 +86,7 @@ func TestRedirectURL(t *testing.T) {
 		DataBase: "",
 	}
 
+	pool := &pgxpool.Pool{}
 	conn := &pgx.Conn{}
 
 	logger, err := loger.SetupLogger()
@@ -93,7 +96,7 @@ func TestRedirectURL(t *testing.T) {
 	}
 
 	// Указываем экземпляр URLStore
-	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn, logger)
+	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn, logger, pool)
 
 	link := "http://example.com"
 	formData := strings.NewReader(link)
@@ -112,7 +115,7 @@ func TestRedirectURL(t *testing.T) {
 	// Регистрируем обработчик
 	r.Post(
 		"/", func(w http.ResponseWriter, r *http.Request) {
-			handlers.ShortenURL(w, r, cfg.BaseURL, store)
+			handlers.ShortenURL(w, r, cfg.BaseURL, store, logger)
 		},
 	)
 
