@@ -18,7 +18,7 @@ func (m *GzipMiddleware) Apply(next http.Handler) http.Handler {
 				}
 				defer gz.Close()
 
-				// Замена тела запроса на распакованное содержимое
+				// Замена тела запроса на распакованное содержимое.
 				r.Body = http.MaxBytesReader(w, gz, r.ContentLength)
 				r.Header.Del("Content-Encoding")
 				r.Header.Del("Content-Length")
