@@ -76,7 +76,7 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 
 	if len(urls) == 0 {
 		// Если нет сокращенных URL пользователя, возвращаем статус 204 No Content
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
