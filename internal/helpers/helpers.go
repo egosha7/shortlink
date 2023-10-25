@@ -1,16 +1,13 @@
 package helpers
 
 import (
-	"math/rand"
+	"github.com/google/uuid"
 )
 
 func GenerateID(n int) string {
-	// генерация случайного идентификатора
-	runestring := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" // abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
-	var letterRunes = []rune(runestring)
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	id := uuid.New().String()
+	if n < len(id) {
+		return id[:n]
 	}
-	return string(b)
+	return id
 }
