@@ -8,7 +8,9 @@ import (
 	"github.com/egosha7/shortlink/internal/loger"
 	routes "github.com/egosha7/shortlink/internal/router"
 	"go.uber.org/zap"
+	"log"
 	"net/http"
+	"net/http/pprof"
 	"os"
 )
 
@@ -32,6 +34,20 @@ func main() {
 	defer conn.Close(context.Background())
 
 	r := routes.SetupRoutes(cfg, conn, logger)
+
+	// Зарегистрируем маршруты для профилирования
+	mux := http.NewServeMux()
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+	go func() {
+		if err := http.ListenAndServe(":6060", mux); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	// Запуск сервера
 	err = http.ListenAndServe(cfg.Addr, loger.LogMiddleware(logger, r))

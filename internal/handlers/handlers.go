@@ -104,8 +104,6 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 
 	setCookieHeader := w.Header().Get("Set-Cookie")
 	if setCookieHeader != "" {
-
-		fmt.Println("Cookie set in the response:", setCookieHeader)
 		userID = r.Context().Value(UserIDKey).(string)
 		newCtx := context.WithValue(r.Context(), UserIDKey, "")
 		r = r.WithContext(newCtx)
@@ -117,15 +115,14 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 		return
 	}
 
-	logger.Info("Request body (POST /)" + string(body))
+	logger.Info("Request body (POST /)", zap.String("body", string(body)))
 
 	var existingID string
-	var switchBool bool
-	existingID, switchBool = store.AddURL(id, string(body), userID)
+	existingID, switchBool := store.AddURL(id, string(body), userID)
 	if existingID != "" && !switchBool {
 		existingID = strings.TrimRight(existingID, "\n")
 		shortURLout := fmt.Sprintf("%s/%s", BaseURL, existingID)
-		fmt.Println("По этому адресу уже зарегистрирован другой адрес:")
+		logger.Info("По этому адресу уже зарегистрирован другой адрес:", zap.String("shortURL", shortURLout))
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusConflict)
 		w.Write([]byte(shortURLout))
