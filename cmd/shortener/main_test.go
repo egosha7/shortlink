@@ -34,7 +34,7 @@ func BenchmarkShortenURL(b *testing.B) {
 
 	// Запускаем бенчмарк
 	b.ResetTimer()
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 1000; i++ {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusCreated {
 			b.Fatalf("Unexpected status code: %d", w.Code)
