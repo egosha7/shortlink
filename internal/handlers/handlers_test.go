@@ -31,7 +31,7 @@ func TestShortenURL(t *testing.T) {
 
 	logger, err := loger.SetupLogger()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating logger: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error creating loger: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -92,7 +92,7 @@ func TestRedirectURL(t *testing.T) {
 
 	logger, err := loger.SetupLogger()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating logger: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error creating loger: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -181,7 +181,7 @@ func TestHandleShortenURLRequest(t *testing.T) {
 
 	logger, err := loger.SetupLogger()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating logger: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error creating loger: %v\n", err)
 		os.Exit(1)
 	}
 

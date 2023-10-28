@@ -1,4 +1,4 @@
-package logger
+package loger
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ func SetupLogger() (*zap.Logger, error) {
 
 	logger, err := loggerConfig.Build()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create logger: %v", err)
+		return nil, fmt.Errorf("failed to create loger: %v", err)
 	}
 
 	return logger, nil

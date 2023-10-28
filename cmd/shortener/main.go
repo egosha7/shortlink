@@ -18,7 +18,7 @@ func main() {
 
 	logger, err := loger.SetupLogger()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating logger: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error creating loger: %v\n", err)
 		os.Exit(1)
 	}
 	defer logger.Sync()
