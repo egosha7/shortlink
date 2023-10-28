@@ -1,4 +1,4 @@
-package benchmarkHandlers
+package benchmark
 
 import (
 	"github.com/egosha7/shortlink/internal/config"
