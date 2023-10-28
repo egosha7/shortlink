@@ -15,12 +15,13 @@ import (
 	"strings"
 )
 
-type Key string
-
+// ContextKey представляет ключ контекста для идентификатора пользователя.
 type ContextKey string
 
+// UserIDKey - ключ контекста, используемый для хранения идентификатора пользователя.
 const UserIDKey ContextKey = "userID"
 
+// DeleteUserURLsHandler удаляет URL'ы, принадлежащие пользователю.
 func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, wkr *worker.Worker) {
 	userID := auth.GetCookieHandler(w, r)
 	setCookieHeader := w.Header().Get("Set-Cookie")
@@ -51,6 +52,7 @@ func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, wkr *worker.W
 	w.WriteHeader(http.StatusAccepted)
 }
 
+// GetUserURLsHandler возвращает URL'ы, принадлежащие пользователю.
 func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore, logger *zap.Logger) {
 	// Получение идентификатора пользователя из куки
 	userID := auth.GetCookieHandler(w, r)
@@ -97,6 +99,7 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 
 }
 
+// ShortenURL сокращает URL и возвращает короткую ссылку.
 func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore, logger *zap.Logger) {
 	id := helpers.GenerateID(6)
 
@@ -134,10 +137,12 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 	fmt.Fprint(w, shortURL)
 }
 
+// ShortenURLRequest представляет структуру запроса для сокращения URL.
 type ShortenURLRequest struct {
 	URL string `json:"url"`
 }
 
+// HandleShortenURL обрабатывает запрос на сокращение URL.
 func HandleShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) (string, error) {
 
 	var req ShortenURLRequest
@@ -196,6 +201,7 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, st
 	return shortURL, nil
 }
 
+// RedirectURL перенаправляет пользователя по короткой ссылке на оригинальный URL.
 func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
 	id := chi.URLParam(r, "id")
 	url, ok := store.GetURL(id)
@@ -210,6 +216,7 @@ func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
+// HandleShortenBatch обрабатывает пакетный запрос на сокращение URL.
 func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore, logger *zap.Logger) {
 
 	ctx := r.Context()
