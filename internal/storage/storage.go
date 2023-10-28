@@ -124,7 +124,6 @@ func (s *URLStore) GetURL(id string) (string, bool) {
 }
 
 // GetURLsByUserID возвращает URL-ы пользователя по его идентификатору.
-
 func (s *URLStore) GetURLsByUserID(userID string) []URL {
 	if s.DBstring != "" {
 		repo := NewPostgresURLRepository(s.db, s.logger, s.pool)
@@ -145,7 +144,6 @@ func (s *URLStore) GetURLsByUserID(userID string) []URL {
 }
 
 // LoadFromFile загружает данные из файла в хранилище.
-
 func (s *URLStore) LoadFromFile() error {
 	// Проверка наличия флага или переменной окружения
 	if s.filePath == "" {
