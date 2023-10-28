@@ -101,7 +101,7 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 
 			route.Post(
 				"/api/shorten/batch", func(w http.ResponseWriter, r *http.Request) {
-					handlers.HandleShortenBatch(w, r, cfg.BaseURL, store)
+					handlers.HandleShortenBatch(w, r, cfg.BaseURL, store, logger)
 				},
 			)
 

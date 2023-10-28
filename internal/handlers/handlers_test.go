@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/egosha7/shortlink/internal/config"
+	"github.com/egosha7/shortlink/internal/helpers"
 	"github.com/egosha7/shortlink/internal/loger"
 	"github.com/egosha7/shortlink/internal/storage"
 	"github.com/jackc/pgx/v4"
@@ -163,6 +164,68 @@ func TestRedirectURL(t *testing.T) {
 		t.Errorf(
 			"handler returned unexpected location: got %v want %v",
 			rr.Header().Get("Location"), expected,
+		)
+	}
+}
+
+func TestHandleShortenURLRequest(t *testing.T) {
+	// Создайте необходимые зависимости и экземпляры для вашего теста
+	cfg := &config.Config{
+		Addr:     "localhost:8080",
+		BaseURL:  "http://localhost:8080",
+		FilePath: "tmp\\some3.json",
+		DataBase: "",
+	}
+	conn := &pgx.Conn{}
+	pool := &pgxpool.Pool{}
+
+	logger, err := loger.SetupLogger()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating logger: %v\n", err)
+		os.Exit(1)
+	}
+
+	store := storage.NewURLStore(cfg.FilePath, cfg.DataBase, conn, logger, pool)
+
+	// Создайте тестовый запрос с телом JSON-объекта, представляющего URL
+	requestData := `{"url": "http://example.com"}`
+	req, err := http.NewRequest("POST", "/", bytes.NewBufferString(requestData))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.AddCookie(&http.Cookie{
+		Name:  "userID",
+		Value: "testuser",
+	})
+
+	// Создайте тестовый ответ
+	rr := httptest.NewRecorder()
+
+	// Создайте маршрутизатор chi
+	r := chi.NewRouter()
+
+	// Регистрируйте обработчик
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		handlers.HandleShortenURL(w, r, cfg.BaseURL, store)
+	})
+
+	// Вызовите функцию-обработчик
+	r.ServeHTTP(rr, req)
+
+	// Проверяем код ответа
+	if status := rr.Code; status != http.StatusCreated {
+		t.Errorf(
+			"handler returned wrong status code: got %v want %v",
+			status, http.StatusCreated,
+		)
+	}
+
+	actual := strings.TrimSpace(rr.Body.String())
+	expected := `{"result":"http://localhost:8080/` + helpers.LastGeneratedID + `"}`
+	if actual != expected {
+		t.Errorf(
+			"handler returned unexpected body: got %s, want %s",
+			actual, expected,
 		)
 	}
 }

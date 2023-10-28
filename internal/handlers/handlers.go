@@ -210,7 +210,7 @@ func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
+func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore, logger *zap.Logger) {
 
 	ctx := r.Context()
 
@@ -219,18 +219,21 @@ func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	var records []map[string]string
 	err := json.NewDecoder(r.Body).Decode(&records)
 	if err != nil {
+		logger.Error("1", zap.Error(err))
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
 
 	// Проверяем, что есть записи для обработки
 	if len(records) == 0 {
+		logger.Error("2", zap.Error(err))
 		http.Error(w, "Empty batch", http.StatusBadRequest)
 		return
 	}
 
 	res, _ := store.AddURLwithTx(records, ctx, BaseURL, userID)
 	if res == nil {
+		logger.Error("3", zap.Error(err))
 		http.Error(w, "StatusBadRequest", http.StatusBadRequest)
 		return
 	}
