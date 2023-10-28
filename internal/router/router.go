@@ -24,6 +24,9 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 	if err != nil {
 		logger.Error("Error parse config", zap.Error(err))
 	}
+	if config == nil {
+		logger.Error("config nil", zap.Error(err))
+	}
 	config.MaxConns = 1000
 	// Создание пула подключений
 	pool, err := pgxpool.ConnectConfig(context.Background(), config)

@@ -55,5 +55,4 @@ func main() {
 		logger.Error("Error starting server", zap.Error(err))
 		os.Exit(1)
 	}
-
 }
