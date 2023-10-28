@@ -18,6 +18,7 @@ import (
 	"sync"
 )
 
+// URLStore представляет хранилище сокращенных URL.
 type URLStore struct {
 	urls     []URL
 	mu       sync.RWMutex
@@ -28,12 +29,14 @@ type URLStore struct {
 	pool     *pgxpool.Pool
 }
 
+// URL представляет структуру с данными о сокращенном URL.
 type URL struct {
 	ID     string
 	URL    string
 	UserID string
 }
 
+// NewURLStore создает новый экземпляр URLStore.
 func NewURLStore(filePath string, DBstring string, db *pgx.Conn, logger *zap.Logger, pool *pgxpool.Pool) *URLStore {
 	return &URLStore{
 		urls:     make([]URL, 0),
@@ -45,6 +48,7 @@ func NewURLStore(filePath string, DBstring string, db *pgx.Conn, logger *zap.Log
 	}
 }
 
+// DeleteURLs удаляет несколько URL-ов из хранилища.
 func (s *URLStore) DeleteURLs(urls []string, userID string) {
 	if s.DBstring != "" {
 		repo := NewPostgresURLRepository(s.db, s.logger, s.pool)
@@ -53,6 +57,7 @@ func (s *URLStore) DeleteURLs(urls []string, userID string) {
 	s.logger.Error("Database string no exist")
 }
 
+// AddURL добавляет новый URL в хранилище.
 func (s *URLStore) AddURL(id, url, userID string) (string, bool) {
 	if s.DBstring != "" {
 		repo := NewPostgresURLRepository(s.db, s.logger, s.pool)
@@ -91,6 +96,7 @@ func (s *URLStore) AddURL(id, url, userID string) (string, bool) {
 	return id, true
 }
 
+// AddURLwithTx добавляет несколько URL-ов с использованием транзакции.
 func (s *URLStore) AddURLwithTx(records []map[string]string, ctx context.Context, BaseURL string, userID string) ([]map[string]string, bool) {
 	if s.DBstring != "" {
 		repo := NewPostgresURLRepository(s.db, s.logger, s.pool)
@@ -100,6 +106,7 @@ func (s *URLStore) AddURLwithTx(records []map[string]string, ctx context.Context
 	return nil, false
 }
 
+// GetURL возвращает оригинальный URL по его сокращенной версии.
 func (s *URLStore) GetURL(id string) (string, bool) {
 	if s.DBstring != "" {
 		repo := NewPostgresURLRepository(s.db, s.logger, s.pool)
@@ -115,6 +122,8 @@ func (s *URLStore) GetURL(id string) (string, bool) {
 	}
 	return "", false
 }
+
+// GetURLsByUserID возвращает URL-ы пользователя по его идентификатору.
 
 func (s *URLStore) GetURLsByUserID(userID string) []URL {
 	if s.DBstring != "" {
@@ -134,6 +143,8 @@ func (s *URLStore) GetURLsByUserID(userID string) []URL {
 
 	return userURLs
 }
+
+// LoadFromFile загружает данные из файла в хранилище.
 
 func (s *URLStore) LoadFromFile() error {
 	// Проверка наличия флага или переменной окружения
@@ -175,6 +186,7 @@ func (s *URLStore) LoadFromFile() error {
 	return nil
 }
 
+// SaveToFile сохраняет данные из хранилища в файл.
 func (s *URLStore) SaveToFile() error {
 	// Проверка наличия флага или переменной окружения
 	if s.filePath == "" {
@@ -195,6 +207,7 @@ func (s *URLStore) SaveToFile() error {
 	return nil
 }
 
+// URLRepository представляет интерфейс для работы с базой данных.
 type URLRepository interface {
 	AddURL(id string, url string) (string, bool)
 	GetIDByURL(url string) (string, bool)
@@ -203,12 +216,14 @@ type URLRepository interface {
 	PrintAllURLs()
 }
 
+// PostgresURLRepository реализует интерфейс URLRepository для работы с PostgreSQL.
 type PostgresURLRepository struct {
 	db     *pgx.Conn
 	logger *zap.Logger
 	pool   *pgxpool.Pool
 }
 
+// NewPostgresURLRepository создает новый экземпляр PostgresURLRepository.
 func NewPostgresURLRepository(db *pgx.Conn, logger *zap.Logger, pool *pgxpool.Pool) *PostgresURLRepository {
 	return &PostgresURLRepository{
 		db:     db,
@@ -217,6 +232,7 @@ func NewPostgresURLRepository(db *pgx.Conn, logger *zap.Logger, pool *pgxpool.Po
 	}
 }
 
+// DeleteURLs удаляет URL-ы из базы данных.
 func (r *PostgresURLRepository) DeleteURLs(urls []string, userID string) {
 	// Использование пула подключений для выполнения запросов
 	conn, err := r.pool.Acquire(context.Background())
@@ -251,12 +267,13 @@ func (r *PostgresURLRepository) DeleteURLs(urls []string, userID string) {
 	}
 }
 
+// AddURL добавляет новый URL в базу данных.
 func (r *PostgresURLRepository) AddURL(id string, url string, userID string) (string, bool) {
 	return r.addURLWithRetry(id, url, userID, 10)
 }
 
+// AddURLWithRetry добавляет новый URL в базу данных с повторными попытками в случае конфликта.
 func (r *PostgresURLRepository) addURLWithRetry(id string, url string, userID string, attempts int) (string, bool) {
-
 	// Использование пула подключений для выполнения запросов
 	conn, err := r.pool.Acquire(context.Background())
 	if err != nil {
@@ -308,6 +325,7 @@ func (r *PostgresURLRepository) addURLWithRetry(id string, url string, userID st
 	return id, true
 }
 
+// AddURLwithTx добавляет несколько URL-ов в базу данных с использованием транзакции.
 func (r *PostgresURLRepository) AddURLwithTx(records []map[string]string, ctx context.Context, DBString string, BaseURL string, userID string) ([]map[string]string, bool) {
 
 	conn, err := sql.Open("pgx", DBString)
@@ -361,6 +379,7 @@ func (r *PostgresURLRepository) AddURLwithTx(records []map[string]string, ctx co
 	return res, true
 }
 
+// GetIDByURL возвращает идентификатор URL по его оригинальной версии.
 func (r *PostgresURLRepository) GetIDByURL(url string) (string, bool) {
 	var id string
 	query := "SELECT id FROM urls WHERE url = $1"
@@ -375,6 +394,7 @@ func (r *PostgresURLRepository) GetIDByURL(url string) (string, bool) {
 	return id, true
 }
 
+// GetURLByID возвращает оригинальный URL по его идентификатору.
 func (r *PostgresURLRepository) GetURLByID(id string, DataBase string) (string, bool) {
 
 	// Использование пула подключений для выполнения запросов
@@ -416,6 +436,7 @@ func (r *PostgresURLRepository) GetURLByID(id string, DataBase string) (string, 
 	return url, true
 }
 
+// GetURLsByUserID возвращает URL-ы пользователя по его идентификатору.
 func (r *PostgresURLRepository) GetURLsByUserID(userID string) []URL {
 	var userURLs []URL
 	query := `
@@ -449,6 +470,7 @@ func (r *PostgresURLRepository) GetURLsByUserID(userID string) []URL {
 	return userURLs
 }
 
+// PrintAllURLs выводит все URL-ы из базы данных.
 func (r *PostgresURLRepository) PrintAllURLs() {
 	rows, err := r.db.Query(context.Background(), "SELECT id, url FROM urls")
 	if err != nil {
@@ -476,6 +498,7 @@ func (r *PostgresURLRepository) PrintAllURLs() {
 	}
 }
 
+// CreateTable создает необходимые таблицы в базе данных.
 func (r *PostgresURLRepository) CreateTable() error {
 	_, err := r.db.Exec(
 		context.Background(), `
