@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
+// SetupRoutes настраивает и возвращает обработчик HTTP-маршрутов.
 func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Handler {
 	config, err := pgxpool.ParseConfig(cfg.DataBase)
 	if err != nil {
