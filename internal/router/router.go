@@ -39,7 +39,7 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 		repo.CreateTable()
 	}
 
-	// Загрузка данных из файла
+	// Загрузка данных из файла.
 	err = store.LoadFromFile()
 	if err != nil {
 		logger.Error("Error loading data from file", zap.Error(err)) // Используем логер для вывода ошибки
