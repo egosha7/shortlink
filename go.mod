@@ -5,6 +5,7 @@ go 1.20
 require github.com/go-chi/chi v1.5.4
 
 require (
+	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/alecthomas/kingpin v2.2.6+incompatible // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
@@ -40,7 +41,11 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/exp/typeparams v0.0.0-20221208152030-732eee02a75a // indirect
+	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/tools v0.14.0 // indirect
+	honnef.co/go/tools v0.4.6 // indirect
 )
