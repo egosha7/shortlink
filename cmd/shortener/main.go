@@ -17,6 +17,7 @@ import (
 	"os"
 )
 
+// Глобальные переменные
 var (
 	// Version - это версия сборки приложения.
 	Version string
