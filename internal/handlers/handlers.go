@@ -15,12 +15,13 @@ import (
 	"strings"
 )
 
-type Key string
-
+// ContextKey представляет ключ контекста для идентификатора пользователя.
 type ContextKey string
 
+// UserIDKey - ключ контекста, используемый для хранения идентификатора пользователя.
 const UserIDKey ContextKey = "userID"
 
+// DeleteUserURLsHandler удаляет URL'ы, принадлежащие пользователю.
 func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, wkr *worker.Worker) {
 	userID := auth.GetCookieHandler(w, r)
 	setCookieHeader := w.Header().Get("Set-Cookie")
@@ -51,6 +52,7 @@ func DeleteUserURLsHandler(w http.ResponseWriter, r *http.Request, wkr *worker.W
 	w.WriteHeader(http.StatusAccepted)
 }
 
+// GetUserURLsHandler возвращает URL'ы, принадлежащие пользователю.
 func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore, logger *zap.Logger) {
 	// Получение идентификатора пользователя из куки
 	userID := auth.GetCookieHandler(w, r)
@@ -76,7 +78,7 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 
 	if len(urls) == 0 {
 		// Если нет сокращенных URL пользователя, возвращаем статус 204 No Content
-		w.WriteHeader(http.StatusNoContent)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
@@ -97,6 +99,7 @@ func GetUserURLsHandler(w http.ResponseWriter, r *http.Request, BaseURL string, 
 
 }
 
+// ShortenURL сокращает URL и возвращает короткую ссылку.
 func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore, logger *zap.Logger) {
 	id := helpers.GenerateID(6)
 
@@ -104,8 +107,6 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 
 	setCookieHeader := w.Header().Get("Set-Cookie")
 	if setCookieHeader != "" {
-
-		fmt.Println("Cookie set in the response:", setCookieHeader)
 		userID = r.Context().Value(UserIDKey).(string)
 		newCtx := context.WithValue(r.Context(), UserIDKey, "")
 		r = r.WithContext(newCtx)
@@ -117,15 +118,11 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 		return
 	}
 
-	logger.Info("Request body (POST /)" + string(body))
-
 	var existingID string
-	var switchBool bool
-	existingID, switchBool = store.AddURL(id, string(body), userID)
+	existingID, switchBool := store.AddURL(id, string(body), userID)
 	if existingID != "" && !switchBool {
 		existingID = strings.TrimRight(existingID, "\n")
 		shortURLout := fmt.Sprintf("%s/%s", BaseURL, existingID)
-		fmt.Println("По этому адресу уже зарегистрирован другой адрес:")
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusConflict)
 		w.Write([]byte(shortURLout))
@@ -140,10 +137,12 @@ func ShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *s
 	fmt.Fprint(w, shortURL)
 }
 
+// ShortenURLRequest представляет структуру запроса для сокращения URL.
 type ShortenURLRequest struct {
 	URL string `json:"url"`
 }
 
+// HandleShortenURL обрабатывает запрос на сокращение URL.
 func HandleShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) (string, error) {
 
 	var req ShortenURLRequest
@@ -202,6 +201,7 @@ func HandleShortenURL(w http.ResponseWriter, r *http.Request, BaseURL string, st
 	return shortURL, nil
 }
 
+// RedirectURL перенаправляет пользователя по короткой ссылке на оригинальный URL.
 func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore) {
 	id := chi.URLParam(r, "id")
 	url, ok := store.GetURL(id)
@@ -216,7 +216,8 @@ func RedirectURL(w http.ResponseWriter, r *http.Request, store *storage.URLStore
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore) {
+// HandleShortenBatch обрабатывает пакетный запрос на сокращение URL.
+func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, store *storage.URLStore, logger *zap.Logger) {
 
 	ctx := r.Context()
 
@@ -225,18 +226,21 @@ func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	var records []map[string]string
 	err := json.NewDecoder(r.Body).Decode(&records)
 	if err != nil {
+		logger.Error("1", zap.Error(err))
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
 
 	// Проверяем, что есть записи для обработки
 	if len(records) == 0 {
+		logger.Error("2", zap.Error(err))
 		http.Error(w, "Empty batch", http.StatusBadRequest)
 		return
 	}
 
 	res, _ := store.AddURLwithTx(records, ctx, BaseURL, userID)
 	if res == nil {
+		logger.Error("3", zap.Error(err))
 		http.Error(w, "StatusBadRequest", http.StatusBadRequest)
 		return
 	}
