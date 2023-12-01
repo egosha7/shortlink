@@ -11,6 +11,7 @@ import (
 	"github.com/egosha7/shortlink/internal/loger"
 	routes "github.com/egosha7/shortlink/internal/router"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/acme/autocert"
 	"log"
 	"net/http"
 	"net/http/pprof"
@@ -71,10 +72,50 @@ func main() {
 		}
 	}()
 
-	// Запустить основной сервер.
-	err = http.ListenAndServe(cfg.Addr, loger.LogMiddleware(logger, r))
-	if err != nil {
-		logger.Error("Ошибка запуска сервера", zap.Error(err))
-		os.Exit(1)
+	// Включение HTTPS, если задан соответствующий флаг или переменная окружения
+	enableHTTPS := cfg.SwitchSSL
+
+	if enableHTTPS {
+		// autocert.Manager обеспечивает автоматическую генерацию и обновление сертификатов Let's Encrypt
+		manager := &autocert.Manager{
+			// Директория для хранения сертификатов
+			Cache: autocert.DirCache("/cert"),
+			// Функция, принимающая Terms of Service издателя сертификатов
+			Prompt: autocert.AcceptTOS,
+			// Ваш временный домен от ngrok
+			HostPolicy: autocert.HostWhitelist("816d-178-214-245-167.ngrok-free.app"),
+		}
+
+		// Запуск веб-сервера с HTTPS и использованием autocert.Listener
+		server := &http.Server{
+			Addr:      ":8443", // Используйте порт HTTPS
+			Handler:   loger.LogMiddleware(logger, r),
+			TLSConfig: manager.TLSConfig(),
+		}
+
+		// Горутина для автоматического обновления сертификатов
+		go func() {
+			if err := http.Serve(manager.Listener(), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "text/plain")
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte("Hello, TLS"))
+			})); err != nil {
+				logger.Fatal("Error serving autocert", zap.Error(err))
+			}
+		}()
+
+		// Запуск основного сервера с HTTPS
+		err := server.ListenAndServeTLS("", "")
+		if err != nil {
+			logger.Error("Error starting HTTPS server", zap.Error(err))
+			os.Exit(1)
+		}
+	} else {
+		// Запуск веб-сервера с HTTP
+		err := http.ListenAndServe(cfg.Addr, loger.LogMiddleware(logger, r))
+		if err != nil {
+			logger.Error("Error starting HTTP server", zap.Error(err))
+			os.Exit(1)
+		}
 	}
 }

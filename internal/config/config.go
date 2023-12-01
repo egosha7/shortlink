@@ -12,19 +12,21 @@ import (
 
 // Config - структура конфигурации приложения
 type Config struct {
-	Addr     string `env:"SERVER_ADDRESS"`    // Адрес сервера
-	BaseURL  string `env:"BASE_URL"`          // Базовый адрес результирующего сокращенного URL
-	FilePath string `env:"FILE_STORAGE_PATH"` // Путь к файлу для сохранения данных
-	DataBase string `env:"DATABASE_DSN"`      // Адрес базы данных
+	Addr      string `env:"SERVER_ADDRESS"`    // Адрес сервера
+	BaseURL   string `env:"BASE_URL"`          // Базовый адрес результирующего сокращенного URL
+	FilePath  string `env:"FILE_STORAGE_PATH"` // Путь к файлу для сохранения данных
+	DataBase  string `env:"DATABASE_DSN"`      // Адрес базы данных
+	SwitchSSL bool   `env:"ENABLE_HTTPS"`      // SSL
 }
 
 // Default - функция для создания новой конфигурации с значениями по умолчанию
 func Default() *Config {
 	return &Config{
-		Addr:     "localhost:8080",
-		BaseURL:  "http://localhost:8080",
-		FilePath: "",
-		DataBase: "", // postgres://postgres:egosha@localhost:5432/shortlink
+		Addr:      "localhost:8080",
+		BaseURL:   "http://localhost:8080",
+		FilePath:  "",
+		DataBase:  "", // postgres://postgres:egosha@localhost:5432/shortlink
+		SwitchSSL: false,
 	}
 }
 
@@ -38,6 +40,7 @@ func OnFlag(logger *zap.Logger) *Config {
 	flag.StringVar(&config.BaseURL, "b", defaultValue.BaseURL, "Базовый адрес результирующего сокращенного URL")
 	flag.StringVar(&config.FilePath, "f", defaultValue.FilePath, "Путь к файлу данных")
 	flag.StringVar(&config.DataBase, "d", defaultValue.DataBase, "Адрес базы данных")
+	flag.BoolVar(&config.SwitchSSL, "s", defaultValue.SwitchSSL, "Переключатель SSL")
 	flag.Parse()
 
 	godotenv.Load()
