@@ -7,10 +7,11 @@ import (
 	"net/http"
 )
 
+// ConnectToDB устанавливает соединение с базой данных на основе конфигурации.
+// Возвращает соединение (pgx.Conn) и ошибку, если возникает ошибка при подключении.
 func ConnectToDB(cfg *config.Config) (*pgx.Conn, error) {
-
 	if cfg.DataBase == "" {
-		// Возвращаем nil, если строка подключения пуста
+		// Возвращаем пустое соединение, если строка подключения пуста
 		conn := &pgx.Conn{}
 		return conn, nil
 	}
@@ -27,6 +28,7 @@ func ConnectToDB(cfg *config.Config) (*pgx.Conn, error) {
 	return conn, nil
 }
 
+// PingDB выполняет пинг базы данных и отправляет статус в HTTP-ответ.
 func PingDB(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	err := conn.Ping(context.Background())
 	if err != nil {
