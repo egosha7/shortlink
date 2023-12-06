@@ -17,10 +17,14 @@ import (
 	"syscall"
 )
 
+// Глобальные переменные
 var (
-	Version   string
+	// Version - это версия сборки приложения.
+	Version string
+	// BuildTime - это временная метка времени сборки приложения.
 	BuildTime string
-	Commit    string
+	// Commit - это хеш коммита приложения.
+	Commit string
 )
 
 func main() {
