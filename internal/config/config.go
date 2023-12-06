@@ -2,6 +2,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"github.com/caarlos0/env/v6"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
@@ -12,21 +13,21 @@ import (
 
 // Config - структура конфигурации приложения
 type Config struct {
-	Addr      string `env:"SERVER_ADDRESS"`    // Адрес сервера
-	BaseURL   string `env:"BASE_URL"`          // Базовый адрес результирующего сокращенного URL
-	FilePath  string `env:"FILE_STORAGE_PATH"` // Путь к файлу для сохранения данных
-	DataBase  string `env:"DATABASE_DSN"`      // Адрес базы данных
-	SwitchSSL bool   `env:"ENABLE_HTTPS"`      // SSL
+	Addr        string `env:"SERVER_ADDRESS" json:"server_address"`       // Адрес сервера
+	BaseURL     string `env:"BASE_URL" json:"base_url"`                   // Базовый адрес результирующего сокращенного URL
+	FilePath    string `env:"FILE_STORAGE_PATH" json:"file_storage_path"` // Путь к файлу для сохранения данных
+	DataBase    string `env:"DATABASE_DSN" json:"database_dsn"`           // Адрес базы данных
+	EnableHTTPS bool   `env:"ENABLE_HTTPS" json:"enable_https"`           // SSL
 }
 
 // Default - функция для создания новой конфигурации с значениями по умолчанию
 func Default() *Config {
 	return &Config{
-		Addr:      "localhost:8080",
-		BaseURL:   "http://localhost:8080",
-		FilePath:  "",
-		DataBase:  "", // postgres://postgres:egosha@localhost:5432/shortlink
-		SwitchSSL: false,
+		Addr:        "localhost:8080",
+		BaseURL:     "http://localhost:8080",
+		FilePath:    "",
+		DataBase:    "", // postgres://postgres:egosha@localhost:5432/shortlink
+		EnableHTTPS: false,
 	}
 }
 
@@ -40,7 +41,8 @@ func OnFlag(logger *zap.Logger) *Config {
 	flag.StringVar(&config.BaseURL, "b", defaultValue.BaseURL, "Базовый адрес результирующего сокращенного URL")
 	flag.StringVar(&config.FilePath, "f", defaultValue.FilePath, "Путь к файлу данных")
 	flag.StringVar(&config.DataBase, "d", defaultValue.DataBase, "Адрес базы данных")
-	flag.BoolVar(&config.SwitchSSL, "s", defaultValue.SwitchSSL, "Переключатель SSL")
+	flag.BoolVar(&config.EnableHTTPS, "s", defaultValue.EnableHTTPS, "Переключатель HTTPS")
+	configFile := flag.String("c", "", "Path to the configuration file")
 	flag.Parse()
 
 	godotenv.Load()
@@ -48,6 +50,30 @@ func OnFlag(logger *zap.Logger) *Config {
 	// Парсинг переменных окружения в структуру Config
 	if err := env.Parse(&config); err != nil {
 		logger.Error("Ошибка при парсинге переменных окружения", zap.Error(err))
+	}
+
+	// Загрузка конфигурации из файла
+	if *configFile != "" {
+		fileConfig, err := loadConfig(*configFile)
+		if err != nil {
+			fmt.Println("Error loading config file:", err)
+			os.Exit(1)
+		}
+
+		// Использование значений из файла конфигурации
+		if fileConfig.Addr != "" {
+			config.Addr = fileConfig.Addr
+		}
+		if fileConfig.BaseURL != "" {
+			config.BaseURL = fileConfig.BaseURL
+		}
+		if fileConfig.FilePath != "" {
+			config.FilePath = fileConfig.FilePath
+		}
+		if fileConfig.DataBase != "" {
+			config.DataBase = fileConfig.DataBase
+		}
+		config.EnableHTTPS = fileConfig.EnableHTTPS
 	}
 
 	// Проверка существования файла

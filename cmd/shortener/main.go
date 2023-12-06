@@ -1,6 +1,3 @@
-// Пакет main - это точка входа для службы shortlink.
-//
-// Эта служба предоставляет функциональность сокращения URL.
 package main
 
 import (
@@ -12,30 +9,25 @@ import (
 	routes "github.com/egosha7/shortlink/internal/router"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
-	"log"
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 )
 
-// Глобальные переменные
 var (
-	// Version - это версия сборки приложения.
-	Version string
-	// BuildTime - это временная метка времени сборки приложения.
+	Version   string
 	BuildTime string
-	// Commit - это хеш коммита приложения.
-	Commit string
+	Commit    string
 )
 
-// main - это основная точка входа для службы shortlink.
 func main() {
-	// Вывести информацию о сборке.
 	fmt.Printf("Версия сборки: %s\n", Version)
 	fmt.Printf("Дата сборки: %s\n", BuildTime)
 	fmt.Printf("Коммит: %s\n", Commit)
 
-	// Настроить логгер.
 	logger, err := loger.SetupLogger()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Ошибка создания логгера: %v\n", err)
@@ -43,10 +35,7 @@ func main() {
 	}
 	defer logger.Sync()
 
-	// Проверить конфигурацию из флагов и переменных окружения.
 	cfg := config.OnFlag(logger)
-
-	// Подключиться к базе данных.
 	conn, err := db.ConnectToDB(cfg)
 	if err != nil {
 		logger.Error("Ошибка подключения к базе данных", zap.Error(err))
@@ -54,10 +43,8 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
-	// Настроить маршруты для приложения.
 	r := routes.SetupRoutes(cfg, conn, logger)
 
-	// Зарегистрировать маршруты профилирования.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
@@ -65,35 +52,42 @@ func main() {
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
-	// Запустить горутину для сервера pprof.
 	go func() {
 		if err := http.ListenAndServe(":6060", mux); err != nil {
-			log.Fatal(err)
+			logger.Fatal(err.Error())
 		}
 	}()
 
-	// Включение HTTPS, если задан соответствующий флаг или переменная окружени
-	enableHTTPS := cfg.SwitchSSL
+	enableHTTPS := cfg.EnableHTTPS
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	var wg sync.WaitGroup
+
+	go func() {
+		sig := <-signalCh
+		fmt.Printf("Received signal %v. Shutting down...\n", sig)
+
+		// Дождемся завершения оставшихся запросов
+		wg.Wait()
+
+		// Завершаем программу
+		os.Exit(0)
+	}()
 
 	if enableHTTPS {
-		// autocert.Manager обеспечивает автоматическую генерацию и обновление сертификатов Let's Encrypt
 		manager := &autocert.Manager{
-			// Директория для хранения сертификатов
-			Cache: autocert.DirCache("/cert"),
-			// Функция, принимающая Terms of Service издателя сертификатов
-			Prompt: autocert.AcceptTOS,
-			// Ваш временный домен от ngrok
+			Cache:      autocert.DirCache("/cert"),
+			Prompt:     autocert.AcceptTOS,
 			HostPolicy: autocert.HostWhitelist("816d-178-214-245-167.ngrok-free.app"),
 		}
 
-		// Запуск веб-сервера с HTTPS и использованием autocert.Listener
 		server := &http.Server{
-			Addr:      ":8443", // Используйте порт HTTPS
+			Addr:      ":8443",
 			Handler:   loger.LogMiddleware(logger, r),
 			TLSConfig: manager.TLSConfig(),
 		}
 
-		// Горутина для автоматического обновления сертификатов
 		go func() {
 			if err := http.Serve(manager.Listener(), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "text/plain")
@@ -104,14 +98,12 @@ func main() {
 			}
 		}()
 
-		// Запуск основного сервера с HTTPS
 		err := server.ListenAndServeTLS("", "")
 		if err != nil {
 			logger.Error("Error starting HTTPS server", zap.Error(err))
 			os.Exit(1)
 		}
 	} else {
-		// Запуск веб-сервера с HTTP
 		err := http.ListenAndServe(cfg.Addr, loger.LogMiddleware(logger, r))
 		if err != nil {
 			logger.Error("Error starting HTTP server", zap.Error(err))
