@@ -9,9 +9,10 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
+// CookieName - это имя куки, которое будет использоваться.
 const CookieName = "USER_ID"
 
-// Функция для генерации симметрично подписанной куки с помощью JWT
+// SetSignedCookie генерирует и устанавливает симметрично подписанную куку с использованием JWT.
 func SetSignedCookie(w http.ResponseWriter, userID string, secretKey []byte, expiration time.Duration) {
 	// Создаем новый токен
 	token := jwt.New(jwt.SigningMethodHS256)
@@ -43,7 +44,7 @@ func SetSignedCookie(w http.ResponseWriter, userID string, secretKey []byte, exp
 	http.SetCookie(w, &cookie)
 }
 
-// Функция для проверки симметрично подписанной куки с помощью JWT
+// VerifySignedCookie проверяет симметрично подписанную куку с использованием JWT.
 func VerifySignedCookie(r *http.Request, secretKey []byte) (string, error) {
 	// Получаем значение куки из запроса
 	cookie, err := r.Cookie(CookieName)
@@ -78,8 +79,8 @@ func VerifySignedCookie(r *http.Request, secretKey []byte) (string, error) {
 	return "", fmt.Errorf("invalid cookie")
 }
 
+// SetCookieHandler генерирует и устанавливает куку в HTTP-ответе и возвращает сгенерированный userID.
 func SetCookieHandler(w http.ResponseWriter, r *http.Request) string {
-
 	// Генерируем уникальный идентификатор пользователя
 	userID := helpers.GenerateID(8)
 
@@ -93,8 +94,8 @@ func SetCookieHandler(w http.ResponseWriter, r *http.Request) string {
 	return userID
 }
 
+// GetCookieHandler извлекает userID из симметрично подписанной куки в HTTP-запросе.
 func GetCookieHandler(w http.ResponseWriter, r *http.Request) string {
-
 	// Получаем секретный ключ для подписи
 	secretKey := []byte("your-secret-key")
 
