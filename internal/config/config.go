@@ -13,21 +13,23 @@ import (
 
 // Config - структура конфигурации приложения
 type Config struct {
-	Addr        string `env:"SERVER_ADDRESS" json:"server_address"`       // Адрес сервера
-	BaseURL     string `env:"BASE_URL" json:"base_url"`                   // Базовый адрес результирующего сокращенного URL
-	FilePath    string `env:"FILE_STORAGE_PATH" json:"file_storage_path"` // Путь к файлу для сохранения данных
-	DataBase    string `env:"DATABASE_DSN" json:"database_dsn"`           // Адрес базы данных
-	EnableHTTPS bool   `env:"ENABLE_HTTPS" json:"enable_https"`           // SSL
+	Addr          string `env:"SERVER_ADDRESS" json:"server_address"`       // Адрес сервера
+	BaseURL       string `env:"BASE_URL" json:"base_url"`                   // Базовый адрес результирующего сокращенного URL
+	FilePath      string `env:"FILE_STORAGE_PATH" json:"file_storage_path"` // Путь к файлу для сохранения данных
+	DataBase      string `env:"DATABASE_DSN" json:"database_dsn"`           // Адрес базы данных
+	EnableHTTPS   bool   `env:"ENABLE_HTTPS" json:"enable_https"`           // SSL
+	TrustedSubnet string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`       // Строковое представление бесклассовой адресации (CIDR)
 }
 
 // Default - функция для создания новой конфигурации с значениями по умолчанию
 func Default() *Config {
 	return &Config{
-		Addr:        "localhost:8080",
-		BaseURL:     "http://localhost:8080",
-		FilePath:    "",
-		DataBase:    "", // postgres://postgres:egosha@localhost:5432/shortlink
-		EnableHTTPS: false,
+		Addr:          "localhost:8080",
+		BaseURL:       "http://localhost:8080",
+		FilePath:      "",
+		DataBase:      "", // postgres://postgres:egosha@localhost:5432/shortlink
+		EnableHTTPS:   false,
+		TrustedSubnet: "",
 	}
 }
 
@@ -42,6 +44,7 @@ func OnFlag(logger *zap.Logger) *Config {
 	flag.StringVar(&config.FilePath, "f", defaultValue.FilePath, "Путь к файлу данных")
 	flag.StringVar(&config.DataBase, "d", defaultValue.DataBase, "Адрес базы данных")
 	flag.BoolVar(&config.EnableHTTPS, "s", defaultValue.EnableHTTPS, "Переключатель HTTPS")
+	flag.StringVar(&config.TrustedSubnet, "t", defaultValue.TrustedSubnet, "CIDR")
 	configFile := flag.String("c", "", "Path to the configuration file")
 	flag.Parse()
 
@@ -72,6 +75,9 @@ func OnFlag(logger *zap.Logger) *Config {
 		}
 		if fileConfig.DataBase != "" {
 			config.DataBase = fileConfig.DataBase
+		}
+		if fileConfig.TrustedSubnet != "" {
+			config.TrustedSubnet = fileConfig.TrustedSubnet
 		}
 		config.EnableHTTPS = fileConfig.EnableHTTPS
 	}

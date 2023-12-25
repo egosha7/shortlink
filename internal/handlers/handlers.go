@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi"
 	"go.uber.org/zap"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 )
@@ -248,4 +249,44 @@ func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(res)
+}
+
+// statsHandler возвращает статистику о сокращенных URL и пользователях.
+func StatsHandler(w http.ResponseWriter, r *http.Request, store *storage.URLStore, trustedSubnet string) {
+	// Проверка, что IP-адрес клиента находится в доверенной подсети.
+	if !isTrustedClient(r, trustedSubnet) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	// Получение статистики
+	urlsCount, usersCount := store.GetStats()
+
+	// Отправка JSON-ответа
+	stats := map[string]int{"urls": urlsCount, "users": usersCount}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
+}
+
+// isTrustedClient проверяет, что IP-адрес клиента находится в доверенной подсети.
+func isTrustedClient(r *http.Request, trustedSubnet string) bool {
+	// Получение IP-адреса клиента из заголовка X-Real-IP
+	clientIP := r.Header.Get("X-Real-IP")
+
+	// Парсинг подсети
+	_, trustedIPNet, err := net.ParseCIDR(trustedSubnet)
+	if err != nil {
+		// Обработка ошибки, например, логгирование
+		return false
+	}
+
+	// Парсинг IP-адреса клиента
+	clientAddr := net.ParseIP(clientIP)
+	if clientAddr == nil {
+		// Обработка ошибки, например, логгирование
+		return false
+	}
+
+	// Проверка, находится ли IP-адрес клиента в доверенной подсети
+	return trustedIPNet.Contains(clientAddr)
 }

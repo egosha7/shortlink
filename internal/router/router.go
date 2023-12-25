@@ -106,6 +106,12 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 				},
 			)
 
+			route.Get(
+				"/api/internal/stats", func(w http.ResponseWriter, r *http.Request) {
+					handlers.StatsHandler(w, r, store, cfg.TrustedSubnet)
+				},
+			)
+
 		},
 	)
 

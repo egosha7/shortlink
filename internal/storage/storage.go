@@ -205,6 +205,30 @@ func (s *URLStore) SaveToFile() error {
 	return nil
 }
 
+// GetStats возвращает статистику о сокращенных URL и пользователях.
+func (s *URLStore) GetStats() (int, int) {
+	if s.DBstring != "" {
+		repo := NewPostgresURLRepository(s.db, s.logger, s.pool)
+		return repo.GetStats()
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return len(s.urls), s.countUniqueUsers()
+}
+
+// countUniqueUsers считает количество уникальных пользователей в структуре.
+func (s *URLStore) countUniqueUsers() int {
+	uniqueUsers := make(map[string]struct{})
+
+	for _, u := range s.urls {
+		uniqueUsers[u.UserID] = struct{}{}
+	}
+
+	return len(uniqueUsers)
+}
+
 // URLRepository представляет интерфейс для работы с базой данных.
 type URLRepository interface {
 	AddURL(id string, url string) (string, bool)
@@ -494,6 +518,31 @@ func (r *PostgresURLRepository) PrintAllURLs() {
 	if err := rows.Err(); err != nil {
 		r.logger.Error("Error iterating over rows", zap.Error(err))
 	}
+}
+
+// GetStats возвращает статистику о сокращенных URL и пользователях из базы данных.
+func (r *PostgresURLRepository) GetStats() (int, int) {
+	var urlsCount, usersCount int
+
+	// Подсчитываем количество URL в базе данных
+	err := r.db.QueryRow(
+		context.Background(),
+		"SELECT COUNT(*) FROM urls",
+	).Scan(&urlsCount)
+	if err != nil {
+		r.logger.Error("Failed to get URLs count", zap.Error(err))
+	}
+
+	// Подсчитываем количество уникальных пользователей
+	err = r.db.QueryRow(
+		context.Background(),
+		"SELECT COUNT(DISTINCT userid) FROM user_urls",
+	).Scan(&usersCount)
+	if err != nil {
+		r.logger.Error("Failed to get unique users count", zap.Error(err))
+	}
+
+	return urlsCount, usersCount
 }
 
 // CreateTable создает необходимые таблицы в базе данных.
