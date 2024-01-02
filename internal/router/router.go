@@ -2,6 +2,7 @@ package routes
 
 import (
 	"context"
+	httphandlers "github.com/egosha7/shortlink/handlers"
 	"github.com/egosha7/shortlink/internal/auth"
 	"github.com/egosha7/shortlink/internal/cookiemw"
 	"github.com/egosha7/shortlink/internal/worker"
@@ -90,7 +91,7 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 
 			route.Post(
 				"/", func(w http.ResponseWriter, r *http.Request) {
-					handlers.ShortenURL(w, r, cfg.BaseURL, store, logger)
+					httphandlers.ShortenURL(w, r, cfg.BaseURL, store, logger)
 				},
 			)
 
