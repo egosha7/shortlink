@@ -19,7 +19,8 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
-func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Handler {
+// SetupRoutes настраивает и возвращает обработчик HTTP-маршрутов.
+func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) (http.Handler, *storage.URLStore, *worker.Worker) {
 	config, err := pgxpool.ParseConfig(cfg.DataBase)
 	if err != nil {
 		logger.Error("Error parse config", zap.Error(err))
@@ -39,7 +40,7 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 		repo.CreateTable()
 	}
 
-	// Загрузка данных из файла
+	// Загрузка данных из файла.
 	err = store.LoadFromFile()
 	if err != nil {
 		logger.Error("Error loading data from file", zap.Error(err)) // Используем логер для вывода ошибки
@@ -101,12 +102,18 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) http.Ha
 
 			route.Post(
 				"/api/shorten/batch", func(w http.ResponseWriter, r *http.Request) {
-					handlers.HandleShortenBatch(w, r, cfg.BaseURL, store)
+					handlers.HandleShortenBatch(w, r, cfg.BaseURL, store, logger)
+				},
+			)
+
+			route.Get(
+				"/api/internal/stats", func(w http.ResponseWriter, r *http.Request) {
+					handlers.StatsHandler(w, r, store, cfg.TrustedSubnet)
 				},
 			)
 
 		},
 	)
 
-	return r
+	return r, store, wkr
 }
