@@ -4,11 +4,12 @@ package service
 
 import (
 	"context"
-	"github.com/egosha7/shortlink/cmd/gRPC/proto/pb"
+	pb "github.com/egosha7/shortlink/cmd/gRPC/proto"
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/storage"
 	"github.com/egosha7/shortlink/internal/worker"
 	"github.com/egosha7/shortlink/logic"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // GRPCService реализует интерфейс вашей gRPC службы.
@@ -45,13 +46,13 @@ func (s *GRPCService) ShortenURL(ctx context.Context, req *pb.ShortenURLRequest)
 }
 
 // DeleteUserURLs реализует gRPC-метод DeleteUserURLs.
-func (s *GRPCService) DeleteUserURLs(ctx context.Context, req *pb.DeleteUserURLsRequest) (*pb.Empty, error) {
+func (s *GRPCService) DeleteUserURLs(ctx context.Context, req *pb.DeleteUserURLsRequest) (*emptypb.Empty, error) {
 	body := req.GetBody()
 	userID := req.GetUserId()
 
 	logic.DeleteUserURLs([]byte(body), userID, s.worker)
 
-	return &pb.Empty{}, nil
+	return &emptypb.Empty{}, nil
 }
 
 // GetUserURLs реализует gRPC-метод GetUserURLs.
@@ -80,7 +81,7 @@ func (s *GRPCService) HandleShortenURL(ctx context.Context, req *pb.HandleShorte
 	body := req.GetBody()
 	userID := req.GetUserId()
 
-	shortURL, err := logic.HandleShortenURL([]byte(body), userID, s.store, s.baseURL)
+	shortURL, err := logic.HandleShortenURL([]byte(body), userID, s.store, s.cfg.BaseURL)
 	if err != nil {
 		return nil, err
 	}
@@ -116,23 +117,4 @@ func (s *GRPCService) HandleShortenBatch(ctx context.Context, req *pb.HandleShor
 	}
 
 	return &pb.HandleShortenBatchResponse{Result: urlInfos}, nil
-}
-
-// Stats реализует gRPC-метод Stats.
-func (s *GRPCService) Stats(ctx context.Context, req *pb.StatsRequest) (*pb.StatsResponse, error) {
-	trustedSubnet := req.GetTrustedSubnet()
-	clientIP := req.GetClientIp()
-
-	stats, err := logic.StatsHandler(s.store, clientIP, trustedSubnet)
-	if err != nil {
-		return nil, err
-	}
-
-	// Преобразование типа map[string]int в map[string]int32
-	statsMap := make(map[string]int32)
-	for key, value := range stats {
-		statsMap[key] = int32(value)
-	}
-
-	return &pb.StatsResponse{Stats: statsMap}, nil
 }

@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/egosha7/shortlink/cmd/gRPC/proto/pb"
+	pb "github.com/egosha7/shortlink/cmd/gRPC/proto"
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/db"
 	"github.com/egosha7/shortlink/internal/loger"
