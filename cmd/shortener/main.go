@@ -3,12 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
+	pb "github.com/egosha7/shortlink/cmd/gRPC/proto"
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/db"
 	"github.com/egosha7/shortlink/internal/loger"
-	routes "github.com/egosha7/shortlink/internal/router"
+	"github.com/egosha7/shortlink/internal/router"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
+	"google.golang.org/grpc"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -53,7 +56,7 @@ func main() {
 	defer conn.Close(context.Background())
 
 	// Настройка маршрутов для приложения.
-	r := routes.SetupRoutes(cfg, conn, logger)
+	r, grpcService := routes.SetupRoutes(cfg, conn, logger)
 
 	// Регистрация маршрутов профилирования.
 	mux := http.NewServeMux()
@@ -119,17 +122,36 @@ func main() {
 		}()
 
 		// Запуск HTTPS сервера.
-		err := server.ListenAndServeTLS("", "")
-		if err != nil {
-			logger.Error("Ошибка запуска HTTPS сервера", zap.Error(err))
-			os.Exit(1)
-		}
+		go func() {
+			if err := server.ListenAndServeTLS("", ""); err != nil {
+				logger.Error("Ошибка запуска HTTPS сервера", zap.Error(err))
+				os.Exit(1)
+			}
+		}()
 	} else {
 		// Запуск HTTP сервера.
-		err := http.ListenAndServe(cfg.Addr, loger.LogMiddleware(logger, r))
-		if err != nil {
-			logger.Error("Ошибка запуска HTTP сервера", zap.Error(err))
-			os.Exit(1)
-		}
+		go func() {
+			if err := http.ListenAndServe(cfg.Addr, loger.LogMiddleware(logger, r)); err != nil {
+				logger.Error("Ошибка запуска HTTP сервера", zap.Error(err))
+				os.Exit(1)
+			}
+		}()
 	}
+
+	// gRPC
+
+	// Запуск gRPC сервера
+	grpcServer := grpc.NewServer()
+	pb.RegisterShortLinkServiceServer(grpcServer, grpcService)
+
+	// Запуск горутины для gRPC сервера
+	go func() {
+		listener, err := net.Listen("tcp", ":50051")
+		if err != nil {
+			logger.Fatal("Ошибка при прослушивании порта для gRPC", zap.Error(err))
+		}
+		if err := grpcServer.Serve(listener); err != nil {
+			logger.Fatal("Ошибка запуска gRPC сервера", zap.Error(err))
+		}
+	}()
 }
