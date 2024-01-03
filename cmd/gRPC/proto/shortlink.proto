@@ -8,13 +8,72 @@ option go_package = "github.com/egosha7/shortlink/cmd/gRPC/proto";
 
 service ShortLinkService {
   rpc ShortenURL(ShortenURLRequest) returns (ShortenURLResponse);
+  rpc DeleteUserURLs(DeleteUserURLsRequest) returns (google.protobuf.Empty);
+  rpc GetUserURLs(GetUserURLsRequest) returns (GetUserURLsResponse);
+  rpc HandleShortenURL(HandleShortenURLRequest) returns (HandleShortenURLResponse);
+  rpc HandleShortenBatch(HandleShortenBatchRequest) returns (HandleShortenBatchResponse);
+  rpc Stats(StatsRequest) returns (StatsResponse);
 }
 
 message ShortenURLRequest {
   string body = 1;
-  string userId = 2;
+  string user_id = 2;
+  string base_url = 3;
 }
 
 message ShortenURLResponse {
   string result = 1;
+}
+
+message DeleteUserURLsRequest {
+  string body = 1;
+  string user_id = 2;
+}
+
+message GetUserURLsRequest {
+  string base_url = 1;
+  string user_id = 2;
+}
+
+message GetUserURLsResponse {
+  repeated URLInfo url_info = 1;
+}
+
+message URLInfo {
+  string short_url = 1;
+  string original_url = 2;
+}
+
+message HandleShortenURLRequest {
+  string body = 1;
+  string user_id = 2;
+  string base_url = 3;
+}
+
+message HandleShortenURLResponse {
+  string result = 1;
+}
+
+message HandleShortenBatchRequest {
+  repeated RecordInfo records = 1;
+  string base_url = 2;
+  string user_id = 3;
+}
+
+message RecordInfo {
+  string key = 1;
+  string value = 2;
+}
+
+message HandleShortenBatchResponse {
+  repeated URLInfo result = 1;
+}
+
+message StatsRequest {
+  string trusted_subnet = 1;
+  string client_ip = 2;  // Добавлено новое поле
+}
+
+message StatsResponse {
+  map<string, int32> stats = 1;
 }

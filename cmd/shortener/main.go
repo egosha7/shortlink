@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	pb "github.com/egosha7/shortlink/cmd/gRPC/proto"
+	"github.com/egosha7/shortlink/cmd/gRPC/proto/pb"
 	"github.com/egosha7/shortlink/internal/config"
 	"github.com/egosha7/shortlink/internal/db"
 	"github.com/egosha7/shortlink/internal/loger"
@@ -142,7 +142,7 @@ func main() {
 	// gRPC
 
 	// Запуск gRPC сервера
-	grpcService := service.NewGRPCService(store, wkr, cfg.BaseURL)
+	grpcService := service.NewGRPCService(store, wkr, cfg)
 	grpcServer := grpc.NewServer()
 	pb.RegisterShortLinkServiceServer(grpcServer, grpcService)
 
