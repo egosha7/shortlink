@@ -157,7 +157,7 @@ func HandleShortenBatch(w http.ResponseWriter, r *http.Request, BaseURL string, 
 		return
 	}
 
-	res, err := logic.HandleShortenBatch(records, ctx, BaseURL, store, userID)
+	res, _ := logic.HandleShortenBatch(records, ctx, BaseURL, store, userID)
 	// Отправляем ответ
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

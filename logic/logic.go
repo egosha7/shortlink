@@ -47,7 +47,7 @@ func GetUserURLs(BaseURL string, userID string, store *storage.URLStore) ([]map[
 	urls := store.GetURLsByUserID(userID)
 
 	if len(urls) == 0 {
-		return nil, fmt.Errorf("Unauthorized: %w", http.StatusUnauthorized)
+		return nil, fmt.Errorf("unauthorized: %d", http.StatusUnauthorized)
 	}
 
 	var response []map[string]string
@@ -83,12 +83,12 @@ func HandleShortenURL(body []byte, userID string, store *storage.URLStore, BaseU
 func HandleShortenBatch(records []map[string]string, ctx context.Context, BaseURL string, store *storage.URLStore, userID string) ([]map[string]string, error) {
 	// Проверяем, что есть записи для обработки
 	if len(records) == 0 {
-		return nil, fmt.Errorf("Unauthorized: %w", http.StatusBadRequest)
+		return nil, fmt.Errorf("unauthorized: %d", http.StatusBadRequest)
 	}
 
 	res, _ := store.AddURLwithTx(records, ctx, BaseURL, userID)
 	if res == nil {
-		return nil, fmt.Errorf("Unauthorized: %w", http.StatusBadRequest)
+		return nil, fmt.Errorf("unauthorized: %d", http.StatusBadRequest)
 	}
 
 	return res, nil

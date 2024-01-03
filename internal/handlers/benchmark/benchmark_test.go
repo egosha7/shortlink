@@ -27,7 +27,7 @@ func BenchmarkShortenURL(b *testing.B) {
 	}
 
 	conn, _ := db.ConnectToDB(cfg)
-	r := routes.SetupRoutes(cfg, conn, logger)
+	r, _, _ := routes.SetupRoutes(cfg, conn, logger)
 
 	// Запускаем бенчмарк
 	b.ResetTimer()
