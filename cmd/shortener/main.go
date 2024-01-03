@@ -8,6 +8,7 @@ import (
 	"github.com/egosha7/shortlink/internal/db"
 	"github.com/egosha7/shortlink/internal/loger"
 	"github.com/egosha7/shortlink/internal/router"
+	"github.com/egosha7/shortlink/service"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
 	"google.golang.org/grpc"
@@ -56,7 +57,7 @@ func main() {
 	defer conn.Close(context.Background())
 
 	// Настройка маршрутов для приложения.
-	r, grpcService := routes.SetupRoutes(cfg, conn, logger)
+	r, store, wkr := routes.SetupRoutes(cfg, conn, logger)
 
 	// Регистрация маршрутов профилирования.
 	mux := http.NewServeMux()
@@ -141,6 +142,7 @@ func main() {
 	// gRPC
 
 	// Запуск gRPC сервера
+	grpcService := service.NewGRPCService(store, wkr, cfg.BaseURL)
 	grpcServer := grpc.NewServer()
 	pb.RegisterShortLinkServiceServer(grpcServer, grpcService)
 

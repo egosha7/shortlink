@@ -4,7 +4,7 @@
 // 	protoc        v4.25.1
 // source: shortener.proto
 
-package proto
+package pb
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"

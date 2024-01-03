@@ -5,7 +5,6 @@ import (
 	"github.com/egosha7/shortlink/internal/auth"
 	"github.com/egosha7/shortlink/internal/cookiemw"
 	"github.com/egosha7/shortlink/internal/worker"
-	"github.com/egosha7/shortlink/service"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"go.uber.org/zap"
 	"net/http"
@@ -21,7 +20,7 @@ import (
 )
 
 // SetupRoutes настраивает и возвращает обработчик HTTP-маршрутов.
-func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) (*chi.Mux, *service.GRPCService) {
+func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) (http.Handler, *storage.URLStore, *worker.Worker) {
 	config, err := pgxpool.ParseConfig(cfg.DataBase)
 	if err != nil {
 		logger.Error("Error parse config", zap.Error(err))
@@ -116,7 +115,5 @@ func SetupRoutes(cfg *config.Config, conn *pgx.Conn, logger *zap.Logger) (*chi.M
 		},
 	)
 
-	grpcService := service.NewGRPCService(store, wkr, cfg.BaseURL)
-
-	return r, grpcService
+	return r, store, wkr
 }
